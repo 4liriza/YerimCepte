@@ -16,6 +16,6 @@ Karadeniz Teknik Üniversitesi (KTÜ) öğrencileri düşünülerek geliştirilm
 * **Gerçek Zamanlı Senkronizasyon:** Firebase Realtime Database / Firestore Snapshot Listeners
 
 ## 👥 Proje Ekibi
-* **[Muhammed Ali Rıza Bağcı]** - *[Flutter & Backend]* - [https://github.com/4liriza]
-* **[Caner Aydoğan]** - *[Firebase & Backend]* - [https://github.com/caneraydd]
-* **[Enes Karaoğlan]** - *[UI/UX & Flutter]* - [https://github.com/eneskaraoglan]
+* **Muhammed Ali Rıza Bağcı** - *[Flutter & Backend]* - [https://github.com/4liriza]
+* **Caner Aydoğan** - *[Firebase & Backend]* - [https://github.com/caneraydd]
+* **Enes Karaoğlan** - *[UI/UX & Flutter]* - [https://github.com/eneskaraoglan]
