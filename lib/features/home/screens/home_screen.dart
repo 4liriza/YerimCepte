@@ -10,13 +10,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  // Proje planındaki gereksinimlere göre sekmeler
-  static const List<Widget> _pages = [
-    Center(child: Text('Canlı Doluluk Haritası')),
-    Center(child: Text('QR Okut / Rezervasyon')),
-    Center(child: Text('Profil / Mola Takibi')),
-  ];
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -25,12 +18,48 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Sayfaları build içinde tanımlayarak tema ve context hatalarını önlüyoruz
+    final List<Widget> pages = [
+      Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          itemCount: 9,
+          itemBuilder: (context, index) {
+            // Proje Planı: Dolu, Boş, Molada durumlarının görselleştirilmesi
+            bool isFull = index < 3;
+            return Container(
+              decoration: BoxDecoration(
+                color: isFull ? Colors.red : Colors.green, // Canlı Doluluk Haritası renkleri
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  'Masa ${index + 1}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      const Center(child: Text('QR Tarayıcı Hazırlanıyor...')),
+      const Center(child: Text('Profil ve Mola Ayarları')),
+    ];
+
     return Scaffold(
       appBar: AppBar(title: const Text('YerimCep')),
-      body: _pages[_selectedIndex],
+      body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
+        // Önemli: Bu özellikler 'items' listesinin dışında olmalıydı
+        selectedItemColor: Theme.of(context).primaryColor,
+        unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Harita'),
           BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'QR Tarat'),
