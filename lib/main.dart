@@ -1,6 +1,6 @@
 import 'core/theme/app_theme.dart';
-import 'package:flutter/material.dart'; 
-import 'core/theme/app_theme.dart';
+import 'package:flutter/material.dart';
+import 'features/home/screens/home_screen.dart';
 
 void main() {
   runApp(const YerimCepApp());
@@ -15,7 +15,7 @@ class YerimCepApp extends StatelessWidget {
       title: 'YerimCep',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme, // Hazırladığımız temayı bağladık
-      home: const Placeholder(), // Şimdilik boş bir yer tutucu
+      home: const HomeScreen(),
     );
   }
 }
