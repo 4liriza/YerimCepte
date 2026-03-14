@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'qr_scanner_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +21,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     // Sayfaları build içinde tanımlayarak tema ve context hatalarını önlüyoruz
     final List<Widget> pages = [
+      const MapTab(), // Harita sekmen (GridView olan kısım)
+      const QrScannerScreen(), // İŞTE BURASI: Artık kamera açılacak
+      const Center(child: Text('Profil ve Mola Ayarları')),
+
       Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.builder(
