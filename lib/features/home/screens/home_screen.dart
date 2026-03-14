@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'qr_scanner_screen.dart';
+import 'qr_scanner_screen.dart'; // Bu dosyanın var olduğundan emin ol
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,12 +19,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Sayfaları build içinde tanımlayarak tema ve context hatalarını önlüyoruz
+    // Sayfaları liste olarak burada tanımlıyoruz
     final List<Widget> pages = [
-      const MapTab(), // Harita sekmen (GridView olan kısım)
-      const QrScannerScreen(), // İŞTE BURASI: Artık kamera açılacak
-      const Center(child: Text('Profil ve Mola Ayarları')),
-
+      // 1. SEKME: HARİTA (MapTab yerine doğrudan kodları koyduk)
       Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.builder(
@@ -33,36 +30,66 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
           ),
-          itemCount: 9,
+          itemCount: 12, // Masa sayısını biraz artıralım, kütüphane büyük görünsün :)
           itemBuilder: (context, index) {
-            // Proje Planı: Dolu, Boş, Molada durumlarının görselleştirilmesi
-            bool isFull = index < 3;
+            bool isFull = index < 4; // İlk 4 masa dolu olsun
             return Container(
               decoration: BoxDecoration(
-                color: isFull ? Colors.red : Colors.green, // Canlı Doluluk Haritası renkleri
-                borderRadius: BorderRadius.circular(8),
+                color: isFull ? Colors.red : Colors.green,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Center(
                 child: Text(
                   'Masa ${index + 1}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold
+                  ),
                 ),
               ),
             );
           },
         ),
       ),
-      const Center(child: Text('QR Tarayıcı Hazırlanıyor...')),
-      const Center(child: Text('Profil ve Mola Ayarları')),
+
+      // 2. SEKME: QR TARAYICI
+      const QrScannerScreen(),
+
+      // 3. SEKME: PROFİL VE MOLA
+      const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person, size: 100, color: Colors.grey),
+            SizedBox(height: 20),
+            Text('Enes Karaoğlan', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text('Mola Durumu: Aktif Değil', style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('YerimCep')),
+      appBar: AppBar(
+        title: const Text('YerimCep'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none),
+            onPressed: () {}, // İleride mola uyarıları için
+          ),
+        ],
+      ),
       body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        // Önemli: Bu özellikler 'items' listesinin dışında olmalıydı
         selectedItemColor: Theme.of(context).primaryColor,
         unselectedItemColor: Colors.grey,
         items: const [
