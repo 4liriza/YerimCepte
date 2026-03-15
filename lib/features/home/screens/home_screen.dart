@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'qr_scanner_screen.dart'; // Bu dosyanın var olduğundan emin ol
+import '../../../core/session_manager.dart';
+import 'qr_scanner_screen.dart';
+import 'timer_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,11 +19,59 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Masaya tıklama işlemi
+  void _onTableTap(int tableNumber, bool isFull) {
+    if (isFull) {
+      // Masa doluysa ve oturan bizsek sayaca git, değilsek uyarı ver
+      if (SessionManager().oturdugumMasa == 'Masa $tableNumber') {
+        _onItemTapped(1); // QR sekmesine (yani artık Sayaç sekmesine) yönlendir
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bu masa şu an dolu!')),
+        );
+      }
+    } else {
+      // Masa boşsa rezervasyon onay diyaloğu açabiliriz
+      _showReservationDialog(tableNumber);
+    }
+  }
+
+  void _showReservationDialog(int tableNumber) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Masa $tableNumber'),
+        content: const Text('Bu masayı rezerve etmek istiyor musunuz?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('İptal')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                SessionManager().oturumuBaslat('Masa $tableNumber');
+              });
+              Navigator.pop(context);
+              _onItemTapped(1); // Rezervasyon sonrası sayaca yönlendir
+            },
+            child: const Text('Rezerve Et'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Sayfaları liste olarak burada tanımlıyoruz
+    // DİNAMİK SEKME YÖNETİMİ
+    Widget qrSekmesi;
+    // Eğer bir masada oturuyorsak kamera yerine TimerScreen'i göster
+    if (SessionManager().oturdugumMasa != null) {
+      qrSekmesi = const TimerScreen();
+    } else {
+      qrSekmesi = const QrScannerScreen();
+    }
+
     final List<Widget> pages = [
-      // 1. SEKME: HARİTA (MapTab yerine doğrudan kodları koyduk)
+      // 1. SEKME: HARİTA
       Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.builder(
@@ -30,28 +80,26 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
           ),
-          itemCount: 12, // Masa sayısını biraz artıralım, kütüphane büyük görünsün :)
+          itemCount: 12,
           itemBuilder: (context, index) {
-            bool isFull = index < 4; // İlk 4 masa dolu olsun
-            return Container(
-              decoration: BoxDecoration(
-                color: isFull ? Colors.red : Colors.green,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  'Masa ${index + 1}',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold
-                  ),
+            int tableNum = index + 1;
+            // Eğer o masada biz oturuyorsak rengi farklı olsun (mavi gibi)
+            bool isMyTable = SessionManager().oturdugumMasa == 'Masa $tableNum';
+            bool isFull = index < 4 || isMyTable;
+
+            return InkWell(
+              onTap: () => _onTableTap(tableNum, isFull),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isMyTable ? Colors.blue : (isFull ? Colors.red : Colors.green),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Center(
+                  child: Text('Masa $tableNum',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             );
@@ -59,10 +107,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // 2. SEKME: QR TARAYICI
-      const QrScannerScreen(),
+      // 2. SEKME: DİNAMİK QR VEYA SAYAÇ
+      qrSekmesi,
 
-      // 3. SEKME: PROFİL VE MOLA
+      // 3. SEKME: PROFİL
       const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -77,15 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('YerimCep'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {}, // İleride mola uyarıları için
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('YerimCep')),
       body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -94,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Harita'),
-          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'QR Tarat'),
+          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Oturum'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
         ],
       ),
