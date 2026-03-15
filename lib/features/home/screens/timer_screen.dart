@@ -9,8 +9,9 @@ class TimerScreen extends StatefulWidget {
 }
 
 class _TimerScreenState extends State<TimerScreen> {
-  // Mola süresi: 15 dakika (saniye cinsinden)
-  int _remainingSeconds = 15 * 60;
+  // Mola süresi sabitimiz (15 dakika)
+  static const int molaSuresi = 15 * 60;
+  int _remainingSeconds = molaSuresi;
   Timer? _timer;
   bool _isMolaActive = false;
 
@@ -22,18 +23,42 @@ class _TimerScreenState extends State<TimerScreen> {
           _remainingSeconds--;
         });
       } else {
-        _stopTimer();
-        // Süre bittiğinde yapılacak işlem (Masa boşaltılacak)
+        // SÜRE BİTTİĞİNDE: Sayacı durdur ve masayı boşalt
+        _timer?.cancel();
+        _masaBosalt();
       }
     });
   }
 
+  // Molayı Bitir (Döndüm) tuşuna basıldığında
   void _stopTimer() {
     _timer?.cancel();
-    setState(() => _isMolaActive = false);
+    setState(() {
+      _isMolaActive = false;
+      _remainingSeconds = molaSuresi; // Süreyi tekrar 15 dakikaya resetle
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Moladan döndünüz, süreniz yenilendi.')),
+    );
   }
 
-  // Saniyeyi Dakika:Saniye formatına çeviren yardımcı fonksiyon
+  // Süre dolduğunda otomatik çalışan fonksiyon
+  void _masaBosalt() {
+    if (!mounted) return;
+
+    // Kullanıcıya bilgi ver
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Mola süreniz doldu! Masanız otomatik boşaltıldı.'),
+        backgroundColor: Colors.red,
+      ),
+    );
+
+    // Ana sayfaya (Haritaya) geri gönder
+    Navigator.of(context).pop();
+  }
+
   String _formatTime(int seconds) {
     int minutes = seconds ~/ 60;
     int remainingSeconds = seconds % 60;
@@ -42,13 +67,14 @@ class _TimerScreenState extends State<TimerScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel(); // Bellek sızıntısını önlemek için önemli
+    _timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: const Text("Masa Durumu")),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -62,8 +88,9 @@ class _TimerScreenState extends State<TimerScreen> {
                   width: 200,
                   height: 200,
                   child: CircularProgressIndicator(
-                    value: _remainingSeconds / (15 * 60), // İlerleme çubuğu
+                    value: _remainingSeconds / molaSuresi,
                     strokeWidth: 10,
+                    // Moladayken turuncu, değilken yeşil
                     color: _isMolaActive ? Colors.orange : Colors.green,
                   ),
                 ),
@@ -77,10 +104,10 @@ class _TimerScreenState extends State<TimerScreen> {
             ElevatedButton(
               onPressed: _isMolaActive ? _stopTimer : _startTimer,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isMolaActive ? Colors.red : Colors.orange,
+                backgroundColor: _isMolaActive ? Colors.green : Colors.orange,
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
               ),
-              child: Text(_isMolaActive ? 'Molayı Bitir (Döndüm)' : 'Molaya Çık'),
+              child: Text(_isMolaActive ? 'Masaya Döndüm' : 'Molaya Çık'),
             ),
           ],
         ),
