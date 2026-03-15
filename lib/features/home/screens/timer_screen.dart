@@ -10,7 +10,7 @@ class TimerScreen extends StatefulWidget {
 }
 
 class _TimerScreenState extends State<TimerScreen> {
-  static const int molaSuresi = 15 * 60;
+  static const int molaSuresi = 10;
   int _remainingSeconds = molaSuresi;
   Timer? _timer;
   bool _isMolaActive = false;
