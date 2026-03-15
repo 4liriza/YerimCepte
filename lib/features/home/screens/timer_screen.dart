@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../core/session_manager.dart';
 
 class TimerScreen extends StatefulWidget {
   const TimerScreen({super.key});
@@ -30,13 +31,17 @@ class _TimerScreenState extends State<TimerScreen> {
 
   void _oturumKapat({required String mesaj, Color renk = Colors.green}) {
     _timer?.cancel();
+
+    // BURASI KRİTİK: Hafızadaki masa bilgisini siliyoruz
+    SessionManager().oturumuKapat();
+
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(mesaj), backgroundColor: renk),
     );
 
-    // Uygulamayı ana sayfaya güvenle döndürür
+    // Ana sayfaya dön ve tüm geçmişi temizle
     Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }
 
