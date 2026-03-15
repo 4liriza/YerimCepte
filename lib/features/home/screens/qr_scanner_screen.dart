@@ -10,17 +10,15 @@ class QrScannerScreen extends StatefulWidget {
 }
 
 class _QrScannerScreenState extends State<QrScannerScreen> {
-  // 1. Üst üste okumayı engelleyen kilit mekanizması
+  // Üst üste okumayı engelleyen kilit mekanizması
   bool isProcessing = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Kamera açıldığında kullanıcıya rehberlik eden bir yazı ekleyelim
       appBar: AppBar(title: const Text('Masa QR Kodunu Taratın')),
       body: MobileScanner(
         onDetect: (capture) {
-          // Eğer zaten bir kod işleniyorsa, yenisini görmezden gel
           if (isProcessing) return;
 
           final List<Barcode> barcodes = capture.barcodes;
@@ -32,10 +30,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             final String code = barcodes.first.rawValue ?? "Masa-1";
             debugPrint('QR Okundu: $code');
 
-            // 2. Hafızaya kaydet: Uygulama artık masada olduğumuzu biliyor
             SessionManager().oturumuBaslat(code);
 
-            // 3. Başarı mesajı
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Giriş Başarılı: $code'),
@@ -43,8 +39,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               ),
             );
 
-            // 4. Sayfayı yenilemek için ana ekrana yönlendir
-            // SessionManager dolu olduğu için HomeScreen otomatik olarak TimerScreen'i gösterecek
             Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
           }
         },
