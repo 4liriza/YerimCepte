@@ -1,22 +1,3 @@
-<<<<<<< HEAD
-# yerimcep
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-=======
 # 📚 YerimCepte - Kütüphane Rezervasyon Sistemi
 
 YerimCepte, özellikle sınav dönemlerinde kütüphanelerde yaşanan yer bulma stresini ortadan kaldırmak için tasarlanmış yenilikçi bir mobil rezervasyon ve masa yönetim sistemidir. 
@@ -38,4 +19,3 @@ Karadeniz Teknik Üniversitesi (KTÜ) öğrencileri düşünülerek geliştirilm
 * **Muhammed Ali Rıza Bağcı** - *[Flutter & Backend]* - [https://github.com/4liriza]
 * **Caner Aydoğan** - *[Firebase & Backend]* - [https://github.com/caneraydd]
 * **Enes Karaoğlan** - *[UI/UX & Flutter]* - [https://github.com/eneskaraoglan]
->>>>>>> 48ee0bc4b1982b404301cfafeacc52d77be03702
