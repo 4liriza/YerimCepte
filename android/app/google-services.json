@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "895866284056",
+    "project_id": "yerimcep",
+    "storage_bucket": "yerimcep.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:895866284056:android:13247f6b3ccc567ecabb6d",
+        "android_client_info": {
+          "package_name": "com.example.yerimcep"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAeImjfvDx-7EHd_gRPL3AbZpCKXnx0JCU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
