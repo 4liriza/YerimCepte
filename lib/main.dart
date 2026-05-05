@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'features/home/screens/home_screen.dart';
+import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/register_screen.dart';
 
 void main() {
   runApp(const YerimCepApp());
@@ -15,9 +17,11 @@ class YerimCepApp extends StatelessWidget {
       title: 'YerimCep',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      initialRoute: '/',
+      initialRoute: '/login',
       routes: {
-        '/': (context) => const HomeScreen(),
+        '/home': (context) => const HomeScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
       },
     );
   }
