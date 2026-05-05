@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/session_manager.dart';
 import 'qr_scanner_screen.dart';
 import 'timer_screen.dart';
+import '../../profile/screens/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -213,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       qrSekmesi,
-      const Center(child: Text('Profil Sekmesi')),
+      const ProfileScreen(),
     ];
 
     return Scaffold(
