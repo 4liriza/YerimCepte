@@ -3,17 +3,17 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_sizes.dart';
 
-class FilterChipListWidget extends StatefulWidget {
-  const FilterChipListWidget({super.key});
+class FilterChipListWidget extends StatelessWidget {
+  final String activeFilter;
+  final ValueChanged<String> onFilterChanged;
 
-  @override
-  State<FilterChipListWidget> createState() => _FilterChipListWidgetState();
-}
+  const FilterChipListWidget({
+    super.key, 
+    required this.activeFilter, 
+    required this.onFilterChanged
+  });
 
-class _FilterChipListWidgetState extends State<FilterChipListWidget> {
-  int _selectedIndex = 0;
-  
-  final List<String> filters = [
+  final List<String> filters = const [
     AppStrings.filterAll,
     AppStrings.filterEmpty,
     AppStrings.filterWithSocket,
@@ -29,23 +29,20 @@ class _FilterChipListWidgetState extends State<FilterChipListWidget> {
         padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
         itemCount: filters.length,
         itemBuilder: (context, index) {
-          final isSelected = _selectedIndex == index;
+          final filterName = filters[index];
+          final isSelected = activeFilter == filterName;
           return Padding(
             padding: const EdgeInsets.only(right: AppSizes.p8),
             child: FilterChip(
               label: Text(
-                filters[index],
+                filterName,
                 style: TextStyle(
                   color: isSelected ? Colors.white : AppColors.textSecondary,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
               selected: isSelected,
-              onSelected: (val) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
+              onSelected: (val) => onFilterChanged(filterName),
               backgroundColor: Colors.white,
               selectedColor: AppColors.primary,
               shape: RoundedRectangleBorder(

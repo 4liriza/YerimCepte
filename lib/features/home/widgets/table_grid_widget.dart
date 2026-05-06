@@ -5,11 +5,25 @@ import '../../../core/session_manager.dart';
 
 class TableGridWidget extends StatelessWidget {
   final Function(int, bool) onTableTap;
+  final List<Map<String, dynamic>> tables;
 
-  const TableGridWidget({super.key, required this.onTableTap});
+  const TableGridWidget({
+    super.key, 
+    required this.onTableTap,
+    required this.tables,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (tables.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppSizes.p24),
+          child: Text("Bu filtreye uygun masa bulunamadı.", style: TextStyle(color: AppColors.textSecondary)),
+        ),
+      );
+    }
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -19,26 +33,29 @@ class TableGridWidget extends StatelessWidget {
         mainAxisSpacing: AppSizes.p12,
         childAspectRatio: 1.0,
       ),
-      itemCount: 12,
+      itemCount: tables.length,
       itemBuilder: (context, index) {
-        int tableNum = index + 1;
-        bool isMyTable = SessionManager().oturdugumMasa == 'Masa $tableNum';
-        bool isFull = index < 4 || isMyTable; // Mock data logic
+        final table = tables[index];
+        final int tableNum = table['id'];
+        final bool isMyTable = SessionManager().oturdugumMasa == 'Masa $tableNum';
+        final bool isFull = table['isFull'] || isMyTable;
+        final bool isPassive = table['isPassive'] ?? false; // Filtreden geçemeyenler
 
         Color getCardColor() {
+          if (isPassive) return Colors.grey.shade300;
           if (isMyTable) return AppColors.primary;
           if (isFull) return AppColors.error.withValues(alpha: 0.9);
           return AppColors.success.withValues(alpha: 0.9);
         }
 
         return InkWell(
-          onTap: () => onTableTap(tableNum, isFull),
+          onTap: isPassive ? null : () => onTableTap(tableNum, isFull),
           borderRadius: BorderRadius.circular(AppSizes.r15),
           child: Container(
             decoration: BoxDecoration(
               color: getCardColor(),
               borderRadius: BorderRadius.circular(AppSizes.r15),
-              boxShadow: [
+              boxShadow: isPassive ? [] : [
                 BoxShadow(
                   color: getCardColor().withValues(alpha: 0.3),
                   blurRadius: 8,
@@ -52,18 +69,21 @@ class TableGridWidget extends StatelessWidget {
                 children: [
                   Icon(
                     isMyTable ? Icons.person : (isFull ? Icons.event_seat : Icons.event_seat_outlined),
-                    color: Colors.white,
+                    color: isPassive ? Colors.grey.shade500 : Colors.white,
                     size: AppSizes.iconMedium,
                   ),
                   const SizedBox(height: AppSizes.p4),
                   Text(
                     'Masa $tableNum',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isPassive ? Colors.grey.shade500 : Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
                   ),
+                  // Priz ikonu
+                  if (table['hasSocket'])
+                    Icon(Icons.power, size: 12, color: isPassive ? Colors.transparent : Colors.white70),
                 ],
               ),
             ),
