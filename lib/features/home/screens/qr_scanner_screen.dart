@@ -19,11 +19,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text(AppStrings.qrScreenTitle, style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
       body: Stack(
         children: [
           MobileScanner(
@@ -39,6 +34,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 final String code = barcodes.first.rawValue ?? "Masa-1";
                 debugPrint('QR Okundu: $code');
 
+                // Anlık rezervasyon veya mevcut rezervasyon onayı
                 SessionManager().oturumuBaslat(code);
 
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -49,8 +45,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r12)),
                   ),
                 );
-
-                Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                
+                // HomeScreen'deki ListenableBuilder sayesinde sayfa otomatik olarak TimerScreen'e dönecek
               }
             },
           ),
