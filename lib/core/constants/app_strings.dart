@@ -41,9 +41,13 @@ class AppStrings {
 
   // Timer Screen
   static const String timerScreenTitle = 'Masa Oturumu';
+  static const String timerBreakTitle = 'Mola Verildi';
+  static const String timerActiveTitle = 'Çalışma Zamanı';
   static const String timerEndedMessage = 'Mola süreniz doldu!';
   static const String sessionEndedMessage = 'Oturum sonlandırıldı.';
   static const String backFromBreakMessage = 'Moladan döndünüz, yeriniz korundu.';
   static const String takeBreakButton = 'Molaya Çık';
   static const String returnToTableButton = 'Masaya Döndüm';
+  static const String endSessionButton = 'Oturumu Sonlandır';
+  static const String endSessionConfirm = 'Mevcut oturumu sonlandırmak istediğinize emin misiniz?';
 }
