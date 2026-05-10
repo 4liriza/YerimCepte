@@ -30,15 +30,17 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 final String code = barcodes.first.rawValue ?? "";
                 debugPrint('QR Okundu: $code');
 
-                // Örn: QR içeriği "1" veya "Masa 1" olabilir.
-                // Biz sadece sayı kısmını almaya çalışalım.
-                final int? tableId = int.tryParse(code.replaceAll(RegExp(r'[^0-9]'), ''));
-
-                if (tableId == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Geçersiz QR kod.')),
-                  );
-                  return;
+                int? tableId;
+                
+                // Eğer zaten bir rezervasyon varsa, herhangi bir QR kodu onay olarak kabul et
+                if (SessionManager().oturdugumMasa != null) {
+                  tableId = SessionManager().activeTableId;
+                } else {
+                  // Rezervasyon yoksa QR kodun içindeki sayıyı parse et
+                  tableId = int.tryParse(code.replaceAll(RegExp(r'[^0-9]'), ''));
+                  
+                  // Hala null ise (kullanıcı "herhangi bir qr" dediği için) test amaçlı Masa 1'e ata
+                  tableId ??= 1;
                 }
 
                 setState(() {
