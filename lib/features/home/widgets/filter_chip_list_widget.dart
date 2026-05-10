@@ -23,7 +23,7 @@ class FilterChipListWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 45,
+      height: 40,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
@@ -31,28 +31,45 @@ class FilterChipListWidget extends StatelessWidget {
         itemBuilder: (context, index) {
           final filterName = filters[index];
           final isSelected = activeFilter == filterName;
+          
           return Padding(
             padding: const EdgeInsets.only(right: AppSizes.p8),
-            child: FilterChip(
-              label: Text(
-                filterName,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textSecondary,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            child: GestureDetector(
+              onTap: () => onFilterChanged(filterName),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(AppSizes.r20),
+                  boxShadow: isSelected ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    )
+                  ] : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : Colors.grey.shade200,
+                    width: 1,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  filterName,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 13,
+                  ),
                 ),
               ),
-              selected: isSelected,
-              onSelected: (val) => onFilterChanged(filterName),
-              backgroundColor: Colors.white,
-              selectedColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSizes.r20),
-                side: BorderSide(
-                  color: isSelected ? AppColors.primary : Colors.grey.shade300,
-                ),
-              ),
-              showCheckmark: false,
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.p12, vertical: AppSizes.p8),
             ),
           );
         },
