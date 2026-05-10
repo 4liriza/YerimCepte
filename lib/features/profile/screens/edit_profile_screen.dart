@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/models/user_model.dart';
+import '../widgets/avatar_picker_dialog.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -61,26 +62,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Center(
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: AppColors.primary,
-                    child: Icon(Icons.person, size: 80, color: Colors.white),
-                  ),
-                  /* // Fotoğraf yükleme şimdilik opsiyonel
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: CircleAvatar(
-                      backgroundColor: AppColors.primaryDark,
-                      radius: 20,
-                      child: Icon(Icons.camera_alt, color: Colors.white, size: 20),
+            Center(
+              child: GestureDetector(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AvatarPickerDialog(
+                      onAvatarSelected: (url) {
+                        FirestoreService().updateUser(widget.user.uid, {'profileImage': url});
+                        setState(() {
+                          // Yerel olarak da güncelleme görüntüsü verelim (UI anlık tepki versin)
+                        });
+                      },
                     ),
-                  ),
-                  */
-                ],
+                  );
+                },
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundColor: AppColors.primary,
+                      backgroundImage: widget.user.profileImage != null ? NetworkImage(widget.user.profileImage!) : null,
+                      child: widget.user.profileImage == null 
+                        ? const Icon(Icons.person, size: 80, color: Colors.white)
+                        : null,
+                    ),
+                    const Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        backgroundColor: AppColors.primaryDark,
+                        radius: 20,
+                        child: Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: AppSizes.p40),

@@ -7,6 +7,9 @@ import '../../../core/models/user_model.dart';
 import 'history_screen.dart';
 import 'edit_profile_screen.dart';
 import 'admin_panel_screen.dart';
+import '../widgets/avatar_picker_dialog.dart';
+import '../../../core/constants/avatar_constants.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -32,7 +35,37 @@ class ProfileScreen extends StatelessWidget {
 
         final user = snapshot.data;
         if (user == null) {
-          return const Center(child: Text("Kullanıcı verisi bulunamadı."));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.person_off_rounded, size: 64, color: AppColors.textSecondary),
+                const SizedBox(height: 16),
+                const Text("Kullanıcı verisi bulunamadı.", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text("Profilinizi oluşturarak puan kazanmaya başlayabilirsiniz."),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () async {
+                    final authUser = auth.FirebaseAuth.instance.currentUser;
+                    if (authUser != null) {
+                      final newUser = UserModel(
+                        uid: authUser.uid,
+                        name: authUser.displayName ?? 'Yeni Kullanıcı',
+                        email: authUser.email ?? '',
+                        points: 0,
+                        totalStudyTime: 0,
+                        profileImage: AvatarConstants.defaultAvatar,
+                      );
+                      await FirestoreService().createUser(newUser);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                  child: const Text("Profilimi Oluştur", style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          );
         }
 
         return SingleChildScrollView(
@@ -40,62 +73,97 @@ class ProfileScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Profil Header
-              Container(
-                padding: const EdgeInsets.all(AppSizes.p24),
-                decoration: const BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(AppSizes.r30),
-                    bottomRight: Radius.circular(AppSizes.r30),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: Colors.white.withValues(alpha: 0.2),
-                      child: const Icon(Icons.person, size: 50, color: Colors.white),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  double avatarRadius = constraints.maxWidth > 600 ? 50 : 40;
+                  return Container(
+                    padding: const EdgeInsets.all(AppSizes.p24),
+                    decoration: const BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(AppSizes.r30),
+                        bottomRight: Radius.circular(AppSizes.r30),
+                      ),
                     ),
-                    const SizedBox(width: AppSizes.p20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user.name,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textLight,
-                            ),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AvatarPickerDialog(
+                                onAvatarSelected: (url) {
+                                  FirestoreService().updateUser(user.uid, {'profileImage': url});
+                                },
+                              ),
+                            );
+                          },
+                          child: Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: avatarRadius,
+                                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                backgroundImage: user.profileImage != null ? NetworkImage(user.profileImage!) : null,
+                                child: user.profileImage == null 
+                                  ? Icon(Icons.person, size: avatarRadius + 10, color: Colors.white)
+                                  : null,
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                  child: const Icon(Icons.camera_alt, size: 16, color: AppColors.primary),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "XP: ${user.points} • Seviye ${ (user.points / 500).floor() + 1 }",
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textLight,
-                            ),
+                        ),
+                        const SizedBox(width: AppSizes.p20),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.name,
+                                style: TextStyle(
+                                  fontSize: constraints.maxWidth > 600 ? 28 : 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textLight,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "XP: ${user.points} • Seviye ${ (user.points / 500).floor() + 1 }",
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.textLight,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSizes.p12, vertical: AppSizes.p8),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(AppSizes.r15),
+                            border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+                          ),
+                          child: const Column(
+                            children: [
+                              Icon(Icons.local_fire_department, color: AppColors.warning, size: 20),
+                              Text("7 Gün", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.all(AppSizes.p12),
-                      decoration: BoxDecoration(
-                        color: AppColors.warning.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(AppSizes.r15),
-                        border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
-                      ),
-                      child: const Column(
-                        children: [
-                          Icon(Icons.local_fire_department, color: AppColors.warning),
-                          Text("7 Gün", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                }
               ),
               
               const SizedBox(height: AppSizes.p24),
@@ -112,7 +180,7 @@ class ProfileScreen extends StatelessWidget {
                   children: [
                     _buildStatCard("Toplam Süre", "${user.totalStudyTime} Saat", Icons.timer),
                     const SizedBox(width: AppSizes.p12),
-                    _buildStatCard("Kazanılan Puan", "${user.points} XP", Icons.star_rounded),
+                    _buildStatCard("Puan", "${user.points} XP", Icons.star_rounded),
                   ],
                 ),
               ),
@@ -199,9 +267,23 @@ class ProfileScreen extends StatelessWidget {
                       final topUser = topUsers[index];
                       bool isMe = topUser.uid == user.uid; 
                       return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: isMe ? AppColors.primary : Colors.grey.shade200,
-                          child: Text("${index + 1}", style: TextStyle(color: isMe ? Colors.white : Colors.black)),
+                        leading: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 30,
+                              child: Text("${index + 1}.", style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: index < 3 ? AppColors.primary : AppColors.textSecondary,
+                              )),
+                            ),
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Colors.grey.shade200,
+                              backgroundImage: topUser.profileImage != null ? NetworkImage(topUser.profileImage!) : null,
+                              child: topUser.profileImage == null ? const Icon(Icons.person, size: 20) : null,
+                            ),
+                          ],
                         ),
                         title: Text(
                           topUser.name, 
