@@ -4,14 +4,13 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/services/firestore_service.dart';
-import '../../../core/models/table_model.dart';
 import '../widgets/status_card_widget.dart';
-import '../widgets/filter_chip_list_widget.dart';
-import '../widgets/table_grid_widget.dart';
 import 'qr_scanner_screen.dart';
 import 'timer_screen.dart';
+import 'library_map_screen.dart';
 import '../../profile/screens/profile_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
+import '../../../core/models/user_model.dart';
 import '../../../core/models/announcement_model.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -23,7 +22,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  String _activeFilter = AppStrings.filterAll;
   final FirestoreService _firestoreService = FirestoreService();
 
   @override
@@ -49,198 +47,159 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedIndex = index;
     });
   }
-
-  void _onTableTap(int tableNumber, bool isFull) {
-    if (isFull) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bu masa dolu.'), backgroundColor: AppColors.error),
-      );
-    } else {
-      _showReservationDialog(tableNumber);
-    }
-  }
-
-  void _showReservationDialog(int tableNumber) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        TimeOfDay selectedTime = TimeOfDay.now();
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: Text('Masa $tableNumber Rezerve Et', style: const TextStyle(fontWeight: FontWeight.bold)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Kütüphaneye ne zaman geleceksiniz? Geldiğinizde QR okutmayı unutmayın."),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Seçilen Saat: ", style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextButton(
-                        onPressed: () async {
-                          final TimeOfDay? time = await showTimePicker(
-                            context: context,
-                            initialTime: selectedTime,
-                          );
-                          if (time != null) {
-                            setStateDialog(() => selectedTime = time);
-                          }
-                        },
-                        child: Text(selectedTime.format(context), style: const TextStyle(fontSize: 18, color: AppColors.primary)),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r15)),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(AppStrings.cancelButton, style: TextStyle(color: AppColors.textSecondary)),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final now = DateTime.now();
-                    DateTime startTime = DateTime(now.year, now.month, now.day, selectedTime.hour, selectedTime.minute);
-                    if (startTime.isBefore(now)) {
-                      startTime = startTime.add(const Duration(days: 1));
-                    }
-                    
-                    await SessionManager().rezerveEt(tableNumber, startTime);
-                    
-                    if (!context.mounted) return;
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Rezervasyon başarıyla oluşturuldu!")));
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r8)),
-                  ),
-                  child: const Text("Rezerve Et"),
-                ),
-              ],
-            );
-          }
-        );
-      },
-    );
-  }
-  
-  List<TableModel> _filterTables(List<TableModel> tables) {
-    if (_activeFilter == AppStrings.filterAll) return tables;
-    
-    return tables.where((table) {
-      if (_activeFilter == AppStrings.filterEmpty) return !table.isFull;
-      if (_activeFilter == AppStrings.filterWithSocket) return table.hasSocket;
-      if (_activeFilter == AppStrings.filterSilentArea) return table.isSilentArea;
-      return true;
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: SessionManager(),
-      builder: (context, child) {
-        bool isAtTable = SessionManager().oturdugumMasa != null;
-        
-        Widget qrSekmesi = isAtTable 
-            ? (SessionManager().isQrScanned ? const TimerScreen() : const QrScannerScreen()) 
-            : const QrScannerScreen();
-
-        final List<Widget> pages = [
-          SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                StatusCardWidget(
-                  isAtTable: isAtTable,
-                  tableName: SessionManager().oturdugumMasa,
-                  isQrScanned: SessionManager().isQrScanned,
-                  reservationCountdown: SessionManager().reservationCountdown,
-                  onManageTap: () => _onItemTapped(1),
-                ),
-                const SizedBox(height: AppSizes.p20),
-                _buildAnnouncementsSection(),
-
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(AppSizes.p16, AppSizes.p20, AppSizes.p16, AppSizes.p12),
-                  child: Text(
-                    AppStrings.tableFilterTitle,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                  ),
-                ),
-                FilterChipListWidget(
-                  activeFilter: _activeFilter,
-                  onFilterChanged: (filter) => setState(() => _activeFilter = filter),
-                ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(AppSizes.p16, AppSizes.p24, AppSizes.p16, AppSizes.p12),
-                  child: Text(
-                    AppStrings.floorPlanTitle,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
-                  child: StreamBuilder<List<TableModel>>(
-                    stream: _firestoreService.getTables(),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text(AppStrings.appName),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              auth.FirebaseAuth.instance.signOut();
+            },
+          )
+        ],
+      ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          // Sayfa 0: Ana Ekran
+          RefreshIndicator(
+            onRefresh: () async => SessionManager().syncWithCloud(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Karşılama ve Durum Kartı
+                  StreamBuilder<UserModel?>(
+                    stream: _firestoreService.streamUser(auth.FirebaseAuth.instance.currentUser?.uid ?? ''),
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (snapshot.hasError) {
-                        return Center(child: Text('Hata: ${snapshot.error}'));
-                      }
-                      final tables = snapshot.data ?? [];
-                      return TableGridWidget(
-                        tables: _filterTables(tables),
-                        onTableTap: _onTableTap,
+                      final userName = snapshot.data?.name ?? 'Kullanıcı';
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSizes.p16, AppSizes.p24, AppSizes.p16, AppSizes.p8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Hoş geldin,",
+                              style: TextStyle(fontSize: 16, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                            ),
+                            Text(
+                              userName,
+                              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                            ),
+                          ],
+                        ),
                       );
                     }
                   ),
-                ),
-                const SizedBox(height: AppSizes.p32),
-              ],
+                  
+                  ListenableBuilder(
+                    listenable: SessionManager(),
+                    builder: (context, _) => StatusCardWidget(
+                      isAtTable: SessionManager().oturdugumMasa != null,
+                      tableName: SessionManager().oturdugumMasa,
+                      isQrScanned: SessionManager().isQrScanned,
+                      reservationCountdown: SessionManager().reservationCountdown,
+                      onManageTap: () => _onItemTapped(1),
+                    ),
+                  ),
+
+                  const SizedBox(height: AppSizes.p24),
+
+                  // Hızlı Rezervasyon Butonu
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
+                    child: GestureDetector(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryMapScreen())),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSizes.p24),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.primaryGradient,
+                          borderRadius: BorderRadius.circular(AppSizes.r20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Çalışmaya Başla!",
+                                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    "Hemen bir masa rezerve et",
+                                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: AppSizes.p32),
+                  _buildAnnouncementsSection(),
+                  
+                  const SizedBox(height: AppSizes.p48),
+                ],
+              ),
             ),
           ),
-          qrSekmesi,
-          const ProfileScreen(),
-        ];
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: AppBar(
-            title: const Text(AppStrings.appName),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: () {
-                  FirebaseAuth.instance.signOut();
-                },
-              )
-            ],
+          // Sayfa 1: QR / Timer
+          ListenableBuilder(
+            listenable: SessionManager(),
+            builder: (context, _) {
+              bool isAtTableInternal = SessionManager().oturdugumMasa != null;
+              if (isAtTableInternal) {
+                return SessionManager().isQrScanned ? const TimerScreen() : const QrScannerScreen();
+              } else {
+                return const QrScannerScreen();
+              }
+            }
           ),
-          body: pages[_selectedIndex],
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: _onItemTapped,
-            selectedItemColor: AppColors.primary,
-            unselectedItemColor: AppColors.textSecondary,
-            backgroundColor: Colors.white,
-            elevation: 10,
-            type: BottomNavigationBarType.fixed,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.map_rounded), label: AppStrings.navMap),
-              BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner_rounded), label: AppStrings.navSession),
-              BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: AppStrings.navProfile),
-            ],
-          ),
-        );
-      }
+
+          // Sayfa 2: Profil
+          const ProfileScreen(),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textSecondary,
+        backgroundColor: Colors.white,
+        elevation: 10,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.map_rounded), label: AppStrings.navMap),
+          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner_rounded), label: AppStrings.navSession),
+          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: AppStrings.navProfile),
+        ],
+      ),
     );
   }
 
