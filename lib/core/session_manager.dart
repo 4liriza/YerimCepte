@@ -1,10 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'services/firestore_service.dart';
 
 class SessionManager extends ChangeNotifier {
   static final SessionManager _instance = SessionManager._internal();
   factory SessionManager() => _instance;
   SessionManager._internal();
+
+  final FirestoreService _firestoreService = FirestoreService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String? oturdugumMasa;
   bool moladaMi = false;
@@ -17,9 +22,37 @@ class SessionManager extends ChangeNotifier {
   Timer? _mainTimer;
   VoidCallback? onReservationExpired;
 
+  // Uygulama açılışında buluttaki durumu kontrol et
+  Future<void> syncWithCloud() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      final activeTable = await _firestoreService.getUserActiveTable(user.uid);
+      if (activeTable != null) {
+        oturdugumMasa = 'Masa ${activeTable.id}';
+        isQrScanned = activeTable.status == 'occupied';
+        reservationStartTime = activeTable.reservationTime;
+        
+        if (!isQrScanned && reservationStartTime != null) {
+          _startBackgroundChecker();
+        }
+        notifyListeners();
+      }
+    }
+  }
+
   // İleri Tarihli/Saatli Rezervasyon
-  void rezerveEt(String masaId, DateTime startTime) {
-    oturdugumMasa = masaId;
+  Future<void> rezerveEt(int tableId, DateTime startTime) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _firestoreService.updateTableStatus(tableId, {
+      'status': 'reserved',
+      'currentUserId': user.uid,
+      'isFull': true,
+      'reservationTime': startTime,
+    });
+
+    oturdugumMasa = 'Masa $tableId';
     isQrScanned = false;
     reservationStartTime = startTime;
     reservationCountdown = 10 * 60; // 10 dk tolerans
@@ -28,8 +61,18 @@ class SessionManager extends ChangeNotifier {
   }
   
   // Anlık QR Okutma (Kütüphanedeyken Direkt) veya Rezervasyon Onayı
-  void oturumuBaslat(String masaId) {
-    oturdugumMasa = masaId;
+  Future<void> oturumuBaslat(int tableId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _firestoreService.updateTableStatus(tableId, {
+      'status': 'occupied',
+      'currentUserId': user.uid,
+      'isFull': true,
+      'reservationTime': null,
+    });
+
+    oturdugumMasa = 'Masa $tableId';
     isQrScanned = true;
     reservationStartTime = null;
     _mainTimer?.cancel();
@@ -54,12 +97,19 @@ class SessionManager extends ChangeNotifier {
     }
   }
 
-  // Masada mısın? (Yoklama)
-  void yoklamaBaslat(VoidCallback onYoklamaFailed) {
-    // Test amaçlı 1 dakika sonra yoklama gelmesini simüle edebiliriz. UI tarafında yapacağız.
-  }
+  void oturumuKapat() async {
+    if (oturdugumMasa != null) {
+      int? tableId = int.tryParse(oturdugumMasa!.replaceAll('Masa ', ''));
+      if (tableId != null) {
+        await _firestoreService.updateTableStatus(tableId, {
+          'status': 'available',
+          'currentUserId': null,
+          'isFull': false,
+          'reservationTime': null,
+        });
+      }
+    }
 
-  void oturumuKapat() {
     oturdugumMasa = null;
     moladaMi = false;
     isQrScanned = false;
