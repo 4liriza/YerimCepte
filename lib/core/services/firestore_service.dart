@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/table_model.dart';
 import '../models/user_model.dart';
 import '../models/announcement_model.dart';
+import '../models/reservation_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -71,7 +72,46 @@ class FirestoreService {
       return snapshot.docs.map((doc) => UserModel.fromFirestore(doc.data(), doc.id)).toList();
     });
   }
+
+  // Kullanıcı bilgilerini güncelle (Profil düzenleme)
+  Future<void> updateUser(String uid, Map<String, dynamic> data) async {
+    await _firestore.collection('users').doc(uid).update(data);
+  }
+
+  // Rezervasyon geçmişini getir
+  Stream<List<ReservationModel>> getReservationHistory(String userId) {
+    return _firestore
+        .collection('reservations_history')
+        .where('userId', isEqualTo: userId)
+        .orderBy('startTime', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => ReservationModel.fromFirestore(doc.data(), doc.id)).toList();
+    });
+  }
+
+  // Admin: Yeni duyuru ekle
+  Future<void> addAnnouncement(AnnouncementModel announcement) async {
+    await _firestore.collection('announcements').add({
+      'title': announcement.title,
+      'content': announcement.content,
+      'date': Timestamp.fromDate(announcement.date),
+      'imageUrl': announcement.imageUrl,
+    });
+  }
+
+  // Admin: Duyuru sil
+  Future<void> deleteAnnouncement(String id) async {
+    await _firestore.collection('announcements').doc(id).delete();
+  }
+
+  // Admin: Yeni masa ekle
+  Future<void> addTable(TableModel table) async {
+    await _firestore.collection('tables').add(table.toMap());
+  }
+
+  // Rezervasyon Kaydı Ekle (Oturum bittiğinde çağrılır)
+  Future<void> addReservationRecord(ReservationModel record) async {
+    await _firestore.collection('reservations_history').add(record.toFirestore());
+  }
 }
-
-
-
