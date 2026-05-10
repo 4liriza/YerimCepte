@@ -3,6 +3,8 @@ import '../../../core/session_manager.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_sizes.dart';
+import '../../../core/services/firestore_service.dart';
+import '../../../core/models/table_model.dart';
 import '../widgets/status_card_widget.dart';
 import '../widgets/filter_chip_list_widget.dart';
 import '../widgets/table_grid_widget.dart';
@@ -21,19 +23,14 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   String _activeFilter = AppStrings.filterAll;
-  
-  final List<Map<String, dynamic>> _allTables = List.generate(12, (index) {
-    return {
-      'id': index + 1,
-      'isFull': index < 3,
-      'hasSocket': index % 2 == 0,
-      'isSilentArea': index >= 6,
-    };
-  });
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
     super.initState();
+    // Uygulama açıldığında buluttaki durumu kontrol et
+    SessionManager().syncWithCloud();
+    
     SessionManager().onReservationExpired = () {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -104,15 +101,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Text(AppStrings.cancelButton, style: TextStyle(color: AppColors.textSecondary)),
                 ),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final now = DateTime.now();
                     DateTime startTime = DateTime(now.year, now.month, now.day, selectedTime.hour, selectedTime.minute);
-                    // Eğer seçilen saat geçmişse, yarına rezerve ediyordur
                     if (startTime.isBefore(now)) {
                       startTime = startTime.add(const Duration(days: 1));
                     }
                     
-                    SessionManager().rezerveEt('Masa $tableNumber', startTime);
+                    await SessionManager().rezerveEt(tableNumber, startTime);
+                    
+                    if (!context.mounted) return;
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Rezervasyon başarıyla oluşturuldu!")));
                   },
@@ -130,13 +128,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
   
-  List<Map<String, dynamic>> _getFilteredTables() {
-    return _allTables.map((table) {
-      bool pass = true;
-      if (_activeFilter == AppStrings.filterEmpty && table['isFull']) pass = false;
-      if (_activeFilter == AppStrings.filterWithSocket && !table['hasSocket']) pass = false;
-      if (_activeFilter == AppStrings.filterSilentArea && !table['isSilentArea']) pass = false;
-      return {...table, 'isPassive': !pass};
+  List<TableModel> _filterTables(List<TableModel> tables) {
+    if (_activeFilter == AppStrings.filterAll) return tables;
+    
+    return tables.where((table) {
+      if (_activeFilter == AppStrings.filterEmpty) return !table.isFull;
+      if (_activeFilter == AppStrings.filterWithSocket) return table.hasSocket;
+      if (_activeFilter == AppStrings.filterSilentArea) return table.isSilentArea;
+      return true;
     }).toList();
   }
 
@@ -183,9 +182,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
-                  child: TableGridWidget(
-                    tables: _getFilteredTables(),
-                    onTableTap: _onTableTap,
+                  child: StreamBuilder<List<TableModel>>(
+                    stream: _firestoreService.getTables(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return Center(child: Text('Hata: ${snapshot.error}'));
+                      }
+                      final tables = snapshot.data ?? [];
+                      return TableGridWidget(
+                        tables: _filterTables(tables),
+                        onTableTap: _onTableTap,
+                      );
+                    }
                   ),
                 ),
                 const SizedBox(height: AppSizes.p32),

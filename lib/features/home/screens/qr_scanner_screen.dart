@@ -22,31 +22,41 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       body: Stack(
         children: [
           MobileScanner(
-            onDetect: (capture) {
+            onDetect: (capture) async {
               if (isProcessing) return;
 
               final List<Barcode> barcodes = capture.barcodes;
               if (barcodes.isNotEmpty) {
+                final String code = barcodes.first.rawValue ?? "";
+                debugPrint('QR Okundu: $code');
+
+                // Örn: QR içeriği "1" veya "Masa 1" olabilir.
+                // Biz sadece sayı kısmını almaya çalışalım.
+                final int? tableId = int.tryParse(code.replaceAll(RegExp(r'[^0-9]'), ''));
+
+                if (tableId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Geçersiz QR kod.')),
+                  );
+                  return;
+                }
+
                 setState(() {
                   isProcessing = true;
                 });
 
-                final String code = barcodes.first.rawValue ?? "Masa-1";
-                debugPrint('QR Okundu: $code');
-
                 // Anlık rezervasyon veya mevcut rezervasyon onayı
-                SessionManager().oturumuBaslat(code);
+                await SessionManager().oturumuBaslat(tableId);
 
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('${AppStrings.qrLoginSuccess} $code'),
+                    content: Text('${AppStrings.qrLoginSuccess} Masa $tableId'),
                     backgroundColor: AppColors.success,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r12)),
                   ),
                 );
-                
-                // HomeScreen'deki ListenableBuilder sayesinde sayfa otomatik olarak TimerScreen'e dönecek
               }
             },
           ),

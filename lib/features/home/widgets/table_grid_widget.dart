@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/session_manager.dart';
+import '../../../core/models/table_model.dart';
 
 class TableGridWidget extends StatelessWidget {
   final Function(int, bool) onTableTap;
-  final List<Map<String, dynamic>> tables;
+  final List<TableModel> tables;
 
   const TableGridWidget({
     super.key, 
@@ -36,26 +37,26 @@ class TableGridWidget extends StatelessWidget {
       itemCount: tables.length,
       itemBuilder: (context, index) {
         final table = tables[index];
-        final int tableNum = table['id'];
+        final int tableNum = table.id;
         final bool isMyTable = SessionManager().oturdugumMasa == 'Masa $tableNum';
-        final bool isFull = table['isFull'] || isMyTable;
-        final bool isPassive = table['isPassive'] ?? false; // Filtreden geçemeyenler
+        final bool isFull = table.isFull || isMyTable;
+        
+        // Bu mantığı HomeScreen'de filtreleme sırasında kuracağız
 
         Color getCardColor() {
-          if (isPassive) return Colors.grey.shade300;
           if (isMyTable) return AppColors.primary;
           if (isFull) return AppColors.error.withValues(alpha: 0.9);
           return AppColors.success.withValues(alpha: 0.9);
         }
 
         return InkWell(
-          onTap: isPassive ? null : () => onTableTap(tableNum, isFull),
+          onTap: () => onTableTap(tableNum, isFull),
           borderRadius: BorderRadius.circular(AppSizes.r15),
           child: Container(
             decoration: BoxDecoration(
               color: getCardColor(),
               borderRadius: BorderRadius.circular(AppSizes.r15),
-              boxShadow: isPassive ? [] : [
+              boxShadow: [
                 BoxShadow(
                   color: getCardColor().withValues(alpha: 0.3),
                   blurRadius: 8,
@@ -69,21 +70,21 @@ class TableGridWidget extends StatelessWidget {
                 children: [
                   Icon(
                     isMyTable ? Icons.person : (isFull ? Icons.event_seat : Icons.event_seat_outlined),
-                    color: isPassive ? Colors.grey.shade500 : Colors.white,
+                    color: Colors.white,
                     size: AppSizes.iconMedium,
                   ),
                   const SizedBox(height: AppSizes.p4),
                   Text(
                     'Masa $tableNum',
-                    style: TextStyle(
-                      color: isPassive ? Colors.grey.shade500 : Colors.white,
+                    style: const TextStyle(
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
                   ),
                   // Priz ikonu
-                  if (table['hasSocket'])
-                    Icon(Icons.power, size: 12, color: isPassive ? Colors.transparent : Colors.white70),
+                  if (table.hasSocket)
+                    const Icon(Icons.power, size: 12, color: Colors.white70),
                 ],
               ),
             ),
@@ -93,3 +94,4 @@ class TableGridWidget extends StatelessWidget {
     );
   }
 }
+
