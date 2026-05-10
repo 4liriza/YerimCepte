@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_sizes.dart';
+import '../../../core/services/firestore_service.dart';
+import '../../../core/models/user_model.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -19,14 +21,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     setState(() => _isLoading = true);
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
+      if (credential.user != null) {
+        // Firestore'da kullanıcı dökümanı oluştur
+        final newUser = UserModel(
+          uid: credential.user!.uid,
+          name: _emailController.text.split('@').first, // Geçici isim
+          email: _emailController.text.trim(),
+          points: 0,
+          totalStudyTime: 0,
+        );
+        await FirestoreService().createUser(newUser);
+      }
+
       if (mounted) {
-        Navigator.pop(context); // Go back to login or it will auto route to home because of StreamBuilder
+        Navigator.pop(context);
       }
     } on FirebaseAuthException catch (e) {
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(e.message ?? 'Kayıt olurken bir hata oluştu'),
