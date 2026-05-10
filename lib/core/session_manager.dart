@@ -78,12 +78,22 @@ class SessionManager extends ChangeNotifier {
     notifyListeners();
   }
   
+  int? get activeTableId {
+    if (oturdugumMasa == null) return null;
+    return int.tryParse(oturdugumMasa!.replaceAll('Masa ', ''));
+  }
+
   // Anlık QR Okutma (Kütüphanedeyken Direkt) veya Rezervasyon Onayı
-  Future<void> oturumuBaslat(int tableId) async {
+  Future<void> oturumuBaslat([int? tableId]) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    await _firestoreService.updateTableStatus(tableId, {
+    // Eğer tableId verilmemişse mevcut rezervasyonu kullanmaya çalış
+    int? finalTableId = tableId ?? activeTableId;
+    
+    if (finalTableId == null) return;
+
+    await _firestoreService.updateTableStatus(finalTableId, {
       'status': 'occupied',
       'currentUserId': user.uid,
       'isFull': true,
@@ -91,7 +101,7 @@ class SessionManager extends ChangeNotifier {
       'breakStartTime': null,
     });
 
-    oturdugumMasa = 'Masa $tableId';
+    oturdugumMasa = 'Masa $finalTableId';
     isQrScanned = true;
     reservationStartTime = null;
     _mainTimer?.cancel();
