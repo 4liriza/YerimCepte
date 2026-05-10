@@ -5,6 +5,8 @@ class UserModel {
   final int points;
   final int totalStudyTime;
   final int? currentTableId;
+  final String? profileImage;
+  final bool isAdmin;
 
   UserModel({
     required this.uid,
@@ -13,6 +15,8 @@ class UserModel {
     required this.points,
     required this.totalStudyTime,
     this.currentTableId,
+    this.profileImage,
+    this.isAdmin = false,
   });
 
   factory UserModel.fromFirestore(Map<String, dynamic> data, String id) {
@@ -23,6 +27,8 @@ class UserModel {
       points: data['points'] ?? 0,
       totalStudyTime: data['totalStudyTime'] ?? 0,
       currentTableId: data['currentTableId'],
+      profileImage: data['profileImage'],
+      isAdmin: data['isAdmin'] ?? false,
     );
   }
 
@@ -33,6 +39,8 @@ class UserModel {
       'points': points,
       'totalStudyTime': totalStudyTime,
       'currentTableId': currentTableId,
+      'profileImage': profileImage,
+      'isAdmin': isAdmin,
     };
   }
 }
