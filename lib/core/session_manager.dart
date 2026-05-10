@@ -11,7 +11,10 @@ class SessionManager extends ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  User? get currentUser => _auth.currentUser;
+
   String? oturdugumMasa;
+
   bool moladaMi = false;
   int kalanSure = 20 * 60; // 20 dakika (Mola Hakkı)
   
@@ -32,6 +35,20 @@ class SessionManager extends ChangeNotifier {
         isQrScanned = activeTable.status == 'occupied';
         reservationStartTime = activeTable.reservationTime;
         
+        // Mola durumu kontrolü
+        if (activeTable.breakStartTime != null) {
+          moladaMi = true;
+          final diff = DateTime.now().difference(activeTable.breakStartTime!);
+          final elapsedSeconds = diff.inSeconds;
+          kalanSure = (20 * 60) - elapsedSeconds;
+          
+          if (kalanSure <= 0) {
+            oturumuKapat();
+          } else {
+            _startBreakTimer();
+          }
+        }
+
         if (!isQrScanned && reservationStartTime != null) {
           _startBackgroundChecker();
         }
@@ -50,6 +67,7 @@ class SessionManager extends ChangeNotifier {
       'currentUserId': user.uid,
       'isFull': true,
       'reservationTime': startTime,
+      'breakStartTime': null,
     });
 
     oturdugumMasa = 'Masa $tableId';
@@ -70,6 +88,7 @@ class SessionManager extends ChangeNotifier {
       'currentUserId': user.uid,
       'isFull': true,
       'reservationTime': null,
+      'breakStartTime': null,
     });
 
     oturdugumMasa = 'Masa $tableId';
@@ -82,20 +101,36 @@ class SessionManager extends ChangeNotifier {
   }
 
   // Turnikeden Çıkış (Otomatik Mola) Simülasyonu
-  void otomatikMolaBaslat() {
+  void otomatikMolaBaslat() async {
     if (isQrScanned && !moladaMi) {
-      moladaMi = true;
-      _startBreakTimer();
-      notifyListeners();
+      int? tableId = int.tryParse(oturdugumMasa!.replaceAll('Masa ', ''));
+      if (tableId != null) {
+        final now = DateTime.now();
+        await _firestoreService.updateTableStatus(tableId, {
+          'breakStartTime': now,
+        });
+        moladaMi = true;
+        _startBreakTimer();
+        notifyListeners();
+      }
     }
   }
 
-  void molaBitir() {
+  void molaBitir() async {
     if (moladaMi) {
-      moladaMi = false;
-      notifyListeners();
+      int? tableId = int.tryParse(oturdugumMasa!.replaceAll('Masa ', ''));
+      if (tableId != null) {
+        await _firestoreService.updateTableStatus(tableId, {
+          'breakStartTime': null,
+        });
+        moladaMi = false;
+        kalanSure = 20 * 60; // Geri dönüldüğünde mola süresi resetlenir (veya istersen saklanabilir)
+        _mainTimer?.cancel();
+        notifyListeners();
+      }
     }
   }
+
 
   void oturumuKapat() async {
     if (oturdugumMasa != null) {
