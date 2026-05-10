@@ -12,6 +12,7 @@ import 'qr_scanner_screen.dart';
 import 'timer_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../core/models/announcement_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -162,6 +163,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   reservationCountdown: SessionManager().reservationCountdown,
                   onManageTap: () => _onItemTapped(1),
                 ),
+                const SizedBox(height: AppSizes.p20),
+                _buildAnnouncementsSection(),
+
                 const Padding(
                   padding: EdgeInsets.fromLTRB(AppSizes.p16, AppSizes.p20, AppSizes.p16, AppSizes.p12),
                   child: Text(
@@ -237,6 +241,138 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       }
+    );
+  }
+
+  Widget _buildAnnouncementsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSizes.p16),
+          child: Text(
+            "Kütüphane Duyuruları",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+          ),
+        ),
+        const SizedBox(height: AppSizes.p12),
+        SizedBox(
+          height: 160,
+          child: StreamBuilder<List<AnnouncementModel>>(
+            stream: _firestoreService.getAnnouncements(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return _buildEmptyAnnouncement();
+              }
+
+              final announcements = snapshot.data!;
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
+                itemCount: announcements.length,
+                itemBuilder: (context, index) {
+                  return _buildAnnouncementCard(announcements[index]);
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnnouncementCard(AnnouncementModel announcement) {
+    return Container(
+      width: 280,
+      margin: const EdgeInsets.only(right: AppSizes.p12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppSizes.r15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppSizes.r15),
+        child: Stack(
+          children: [
+            if (announcement.imageUrl != null)
+              Positioned.fill(
+                child: Image.network(
+                  announcement.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    child: const Icon(Icons.campaign_rounded, color: AppColors.primary, size: 40),
+                  ),
+                ),
+              )
+            else
+              Positioned.fill(
+                child: Container(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  child: const Icon(Icons.campaign_rounded, color: AppColors.primary, size: 40),
+                ),
+              ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.7),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSizes.p12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    announcement.title,
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    announcement.content,
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyAnnouncement() {
+    return Container(
+      width: 280,
+      margin: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(AppSizes.r15),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+      ),
+      child: const Center(
+        child: Text("Henüz duyuru bulunmuyor", style: TextStyle(color: AppColors.textSecondary)),
+      ),
     );
   }
 }
