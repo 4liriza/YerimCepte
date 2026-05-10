@@ -4,6 +4,9 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/session_manager.dart';
 import '../../../core/models/user_model.dart';
+import 'history_screen.dart';
+import 'edit_profile_screen.dart';
+import 'admin_panel_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -77,7 +80,6 @@ class ProfileScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // Günlük Seri (Streak) - Şimdilik statik kalabilir veya veriye bağlanabilir
                     Container(
                       padding: const EdgeInsets.all(AppSizes.p12),
                       decoration: BoxDecoration(
@@ -111,6 +113,39 @@ class ProfileScreen extends StatelessWidget {
                     _buildStatCard("Toplam Süre", "${user.totalStudyTime} Saat", Icons.timer),
                     const SizedBox(width: AppSizes.p12),
                     _buildStatCard("Kazanılan Puan", "${user.points} XP", Icons.star_rounded),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppSizes.p24),
+
+              // Menü Öğeleri
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
+                child: Column(
+                  children: [
+                    _buildMenuTile(
+                      context, 
+                      "Rezervasyon Geçmişi", 
+                      Icons.history_rounded, 
+                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const HistoryScreen())),
+                    ),
+                    const SizedBox(height: AppSizes.p12),
+                    _buildMenuTile(
+                      context, 
+                      "Profili Düzenle", 
+                      Icons.edit_outlined, 
+                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => EditProfileScreen(user: user))),
+                    ),
+                    if (user.isAdmin) ...[
+                      const SizedBox(height: AppSizes.p12),
+                      _buildMenuTile(
+                        context, 
+                        "Yönetici Paneli", 
+                        Icons.admin_panel_settings_outlined, 
+                        () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminPanelScreen())),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -185,7 +220,6 @@ class ProfileScreen extends StatelessWidget {
                 },
               ),
               const SizedBox(height: AppSizes.p32),
-
             ],
           ),
         );
@@ -193,6 +227,24 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildMenuTile(BuildContext context, String title, IconData icon, VoidCallback onTap) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppSizes.r15),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: AppColors.primary),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r15)),
+      ),
+    );
+  }
 
   Widget _buildStatCard(String title, String value, IconData icon) {
     return Expanded(
