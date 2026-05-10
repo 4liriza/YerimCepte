@@ -1,193 +1,188 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_sizes.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profilim'),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Profil Header
+          Container(
+            padding: const EdgeInsets.all(AppSizes.p24),
+            decoration: const BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(AppSizes.r30),
+                bottomRight: Radius.circular(AppSizes.r30),
+              ),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  child: const Icon(Icons.person, size: 50, color: Colors.white),
+                ),
+                const SizedBox(width: AppSizes.p20),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Enes K.",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textLight,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        "Seviye 5 • Çalışkan Öğrenci",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Günlük Seri (Streak)
+                Container(
+                  padding: const EdgeInsets.all(AppSizes.p12),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(AppSizes.r15),
+                    border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+                  ),
+                  child: const Column(
+                    children: [
+                      Icon(Icons.local_fire_department, color: AppColors.warning),
+                      Text("7 Gün", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: AppSizes.p24),
+
+          // Haftalık İstatistikler
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSizes.p16),
+            child: Text("Haftalık İstatistikler", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: AppSizes.p12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
+            child: Row(
+              children: [
+                _buildStatCard("Toplam Süre", "24 Saat", Icons.timer),
+                const SizedBox(width: AppSizes.p12),
+                _buildStatCard("Kazanılan Puan", "1200 XP", Icons.star_rounded),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: AppSizes.p32),
+
+          // Rozetler
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSizes.p16),
+            child: Text("Kazanılan Rozetler", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: AppSizes.p12),
+          SizedBox(
+            height: 100,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
+              children: [
+                _buildBadge("Odak Ustası", Icons.center_focus_strong, AppColors.success),
+                _buildBadge("Erken Kalkan", Icons.wb_sunny, AppColors.warning),
+                _buildBadge("Kütüphane Kurdu", Icons.library_books, AppColors.primary),
+                _buildBadge("Gece Kuşu", Icons.nights_stay, Colors.deepPurple),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: AppSizes.p32),
+
+          // Liderlik Tablosu
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSizes.p16),
+            child: Text("Haftanın Liderleri", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: AppSizes.p12),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 5,
+            itemBuilder: (context, index) {
+              bool isMe = index == 2; // Kendimizi 3. sırada gösterelim
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: isMe ? AppColors.primary : Colors.grey.shade200,
+                  child: Text("${index + 1}", style: TextStyle(color: isMe ? Colors.white : Colors.black)),
+                ),
+                title: Text(isMe ? "Enes K." : "Öğrenci ${index + 1}", style: TextStyle(fontWeight: isMe ? FontWeight.bold : FontWeight.normal)),
+                trailing: Text("${30 - (index * 2)} Saat", style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                tileColor: isMe ? AppColors.primary.withValues(alpha: 0.1) : null,
+              );
+            },
+          ),
+          const SizedBox(height: AppSizes.p32),
+        ],
       ),
-      body: SingleChildScrollView(
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(AppSizes.p20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppSizes.r15),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          ],
+        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profil Kısmı (İsim-Soyisim, Fotoğraf, Unvan ve Düzenle Butonu)
-            _buildProfileSection(context),
-            const SizedBox(height: 30),
-            // Başarımlarım Kısmı
-            _buildAchievementsSection(context),
-            // Ayarlar Kısmı
-            _buildSettingsSection(context),
+            Icon(icon, color: AppColors.primary, size: 30),
+            const SizedBox(height: AppSizes.p12),
+            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            Text(title, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProfileSection(BuildContext context) {
+  Widget _buildBadge(String title, IconData icon, Color color) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.only(top: 10, bottom: 30),
+      width: 100,
+      margin: const EdgeInsets.only(right: AppSizes.p12),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.1),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
-        ),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppSizes.r15),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Profil Fotoğrafı
-          Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              CircleAvatar(
-                radius: 60,
-                backgroundColor: Colors.white,
-                child: Icon(
-                  Icons.person,
-                  size: 60,
-                  color: Theme.of(context).primaryColor.withOpacity(0.5),
-                ),
-              ),
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: Theme.of(context).primaryColor,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.camera_alt,
-                    size: 20,
-                    color: Colors.white,
-                  ),
-                  onPressed: () {
-                    // TODO: Profil fotoğrafı değiştirme eklenecek
-                  },
-                  padding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // İsim Soyisim
-          const Text(
-            'İsim Soyisim',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
+          Icon(icon, color: color, size: 32),
           const SizedBox(height: 8),
-
-          // Görünen Unvan
-          const Text(
-            'Unvan',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.black54,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Profili Düzenle Butonu
-          ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Profili düzenleme modülü / sayfası açılacak
-            },
-            icon: const Icon(Icons.edit, color: Colors.white),
-            label: const Text(
-              'Profili Düzenle',
-              style: TextStyle(color: Colors.white),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-          ),
+          Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildAchievementsSection(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.amber.withOpacity(0.2),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.emoji_events, color: Colors.amber, size: 28),
-        ),
-        title: const Text(
-          'Başarımlarım',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        trailing: const Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: Colors.grey,
-        ),
-        onTap: () {
-          // TODO: Başarımlarım ekranına yönlendirme
-        },
-      ),
-    );
-  }
-
-  Widget _buildSettingsSection(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.2),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.settings, color: Colors.blueGrey, size: 28),
-        ),
-        title: const Text(
-          'Ayarlar',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        trailing: const Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: Colors.grey,
-        ),
-        onTap: () {
-          // TODO: Ayarlar ekranına yönlendirme
-        },
       ),
     );
   }

@@ -3,32 +3,33 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_sizes.dart';
-import '../../auth/screens/register_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _login() async {
+  Future<void> _register() async {
     setState(() => _isLoading = true);
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // Main.dart'taki StreamBuilder yönlendirmeyi otomatik yapacak.
+      if (mounted) {
+        Navigator.pop(context); // Go back to login or it will auto route to home because of StreamBuilder
+      }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.message ?? 'Giriş başarısız oldu'),
+          content: Text(e.message ?? 'Kayıt olurken bir hata oluştu'),
           backgroundColor: AppColors.error,
         ));
       }
@@ -48,18 +49,12 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.library_books_rounded, size: AppSizes.iconExtraLarge, color: AppColors.primary),
+              const Icon(Icons.person_add_alt_1_rounded, size: AppSizes.iconExtraLarge, color: AppColors.primary),
               const SizedBox(height: AppSizes.p16),
               const Text(
-                AppStrings.loginTitle,
+                "Hesap Oluştur",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppColors.primaryDark, letterSpacing: -1),
-              ),
-              const SizedBox(height: AppSizes.p8),
-              const Text(
-                AppStrings.loginSubtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: AppSizes.p48),
               _buildTextField(controller: _emailController, label: AppStrings.emailHint, icon: Icons.email_outlined),
@@ -69,21 +64,19 @@ class _LoginScreenState extends State<LoginScreen> {
               _isLoading 
                 ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton(
-                    onPressed: _login,
+                    onPressed: _register,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: AppSizes.p16),
                       elevation: 5,
                       shadowColor: AppColors.primary.withValues(alpha: 0.5),
                     ),
-                    child: const Text(AppStrings.loginButtonText, style: TextStyle(fontSize: 18)),
+                    child: const Text("Kayıt Ol", style: TextStyle(fontSize: 18)),
                   ),
               const SizedBox(height: AppSizes.p24),
               TextButton(
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen()));
-                },
+                onPressed: () => Navigator.pop(context),
                 style: TextButton.styleFrom(foregroundColor: AppColors.primaryDark),
-                child: const Text(AppStrings.noAccountText, style: TextStyle(fontWeight: FontWeight.w600)),
+                child: const Text("Zaten hesabın var mı? Giriş Yap", style: TextStyle(fontWeight: FontWeight.w600)),
               ),
             ],
           ),
