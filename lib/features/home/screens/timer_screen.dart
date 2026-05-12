@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/session_manager.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/app_sizes.dart';
 
 class TimerScreen extends StatefulWidget {
   const TimerScreen({super.key});
@@ -24,16 +27,16 @@ class _TimerScreenState extends State<TimerScreen> {
         });
       } else {
         _timer?.cancel();
-        _oturumKapat(mesaj: 'Mola süreniz doldu!', renk: Colors.red);
+        _oturumKapat(mesaj: AppStrings.timerEndedMessage, renk: AppColors.error);
       }
     });
   }
 
-  void _oturumKapat({required String mesaj, Color renk = Colors.green}) {
+  Future<void> _oturumKapat({required String mesaj, Color renk = AppColors.success}) async {
     _timer?.cancel();
 
-    // BURASI KRİTİK: Hafızadaki masa bilgisini siliyoruz
-    SessionManager().oturumuKapat();
+    // BURASI KRİTİK: Hafızadaki masa bilgisini siliyoruz ve süreyi kaydediyoruz
+    await SessionManager().oturumuKapat();
 
     if (!mounted) return;
 
@@ -59,51 +62,95 @@ class _TimerScreenState extends State<TimerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    String? tableName = SessionManager().oturdugumMasa ?? "Masa";
+    
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Masa Oturumu"),
-        leading: IconButton(
-          icon: const Icon(Icons.exit_to_app),
-          onPressed: () => _oturumKapat(mesaj: 'Oturum sonlandırıldı.'),
-        ),
+        title: const Text(AppStrings.timerScreenTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.power_settings_new_rounded, color: AppColors.error),
+            onPressed: () => _oturumKapat(mesaj: AppStrings.sessionEndedMessage),
+            tooltip: 'Oturumu Kapat',
+          ),
+        ],
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Masa A-12', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 40),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: AppSizes.p24, vertical: AppSizes.p12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppSizes.r20),
+              ),
+              child: Text(
+                tableName,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+            ),
+            const SizedBox(height: 60),
 
             // SÜRE BURADA GÖRÜNÜYOR:
             Stack(
               alignment: Alignment.center,
               children: [
                 SizedBox(
-                  width: 200,
-                  height: 200,
+                  width: 240,
+                  height: 240,
                   child: CircularProgressIndicator(
                     value: _remainingSeconds / molaSuresi,
-                    strokeWidth: 10,
-                    color: _isMolaActive ? Colors.orange : Colors.green,
+                    strokeWidth: 12,
+                    backgroundColor: Colors.grey.shade200,
+                    color: _isMolaActive ? AppColors.warning : AppColors.success,
+                    strokeCap: StrokeCap.round,
                   ),
                 ),
-                Text(
-                  _formatTime(_remainingSeconds),
-                  style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _formatTime(_remainingSeconds),
+                      style: TextStyle(
+                        fontSize: 60,
+                        fontWeight: FontWeight.w800,
+                        color: _isMolaActive ? AppColors.warning : AppColors.textPrimary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    if (_isMolaActive)
+                      const Text(
+                        "Mola Süresi",
+                        style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.w600),
+                      ),
+                  ],
                 ),
               ],
             ),
 
-            const SizedBox(height: 40),
-            ElevatedButton(
+            const SizedBox(height: 60),
+            ElevatedButton.icon(
               onPressed: _isMolaActive
-                  ? () => _oturumKapat(mesaj: 'Moladan döndünüz, yeriniz korundu.')
+                  ? () => _oturumKapat(mesaj: AppStrings.backFromBreakMessage)
                   : _startTimer,
+              icon: Icon(_isMolaActive ? Icons.check_circle_outline : Icons.coffee_rounded),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isMolaActive ? Colors.green : Colors.orange,
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                backgroundColor: _isMolaActive ? AppColors.success : AppColors.warning,
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.p40, vertical: AppSizes.p20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r30)),
+                elevation: 8,
+                shadowColor: (_isMolaActive ? AppColors.success : AppColors.warning).withOpacity(0.5),
               ),
-              child: Text(_isMolaActive ? 'Masaya Döndüm' : 'Molaya Çık'),
+              label: Text(
+                _isMolaActive ? AppStrings.returnToTableButton : AppStrings.takeBreakButton,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
