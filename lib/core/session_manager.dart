@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SessionManager extends ChangeNotifier {
   static final SessionManager _instance = SessionManager._internal();
@@ -9,6 +10,7 @@ class SessionManager extends ChangeNotifier {
   String? oturdugumMasa;
   bool moladaMi = false;
   int kalanSure = 20 * 60; // 20 dakika (Mola Hakkı)
+  DateTime? oturumBaslangicZamani;
   
   // Rezervasyon Özellikleri
   bool isQrScanned = false;
@@ -35,6 +37,7 @@ class SessionManager extends ChangeNotifier {
     _mainTimer?.cancel();
     kalanSure = 20 * 60; // 20 dk mola hakkı resetlenir
     moladaMi = false;
+    oturumBaslangicZamani = DateTime.now();
     notifyListeners();
   }
 
@@ -60,10 +63,36 @@ class SessionManager extends ChangeNotifier {
   }
 
   void oturumuKapat() {
+    // BURASI ASYNC OLMALI. Lütfen alttaki oturumuKapatAsync'i kullanın veya 
+    // bunu async yapıp Firebase'e yazın.
+    // Wait, let's just make it async and add the logic.
+    _oturumuKapatVePuanEkle();
+  }
+
+  Future<void> _oturumuKapatVePuanEkle() async {
+    if (oturumBaslangicZamani != null) {
+      int kazanilanPuan = DateTime.now().difference(oturumBaslangicZamani!).inMinutes;
+      if (kazanilanPuan > 0) {
+        String myUserId = "demo_kullanici"; // Gerçek projede auth
+        DocumentReference userDoc = FirebaseFirestore.instance.collection('leaderboard_points').doc(myUserId);
+        
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          DocumentSnapshot snapshot = await transaction.get(userDoc);
+          if (!snapshot.exists) {
+            transaction.set(userDoc, {'name': 'Ben (Demo)', 'totalPoints': kazanilanPuan});
+          } else {
+            int mevcutPuan = (snapshot.data() as Map<String, dynamic>)['totalPoints'] ?? 0;
+            transaction.update(userDoc, {'totalPoints': mevcutPuan + kazanilanPuan});
+          }
+        });
+      }
+    }
+
     oturdugumMasa = null;
     moladaMi = false;
     isQrScanned = false;
     reservationStartTime = null;
+    oturumBaslangicZamani = null;
     _mainTimer?.cancel();
     notifyListeners();
   }

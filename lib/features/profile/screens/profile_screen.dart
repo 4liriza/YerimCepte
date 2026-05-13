@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 
@@ -120,20 +121,81 @@ class ProfileScreen extends StatelessWidget {
             child: Text("Haftanın Liderleri", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: AppSizes.p12),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 5,
-            itemBuilder: (context, index) {
-              bool isMe = index == 2; // Kendimizi 3. sırada gösterelim
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: isMe ? AppColors.primary : Colors.grey.shade200,
-                  child: Text("${index + 1}", style: TextStyle(color: isMe ? Colors.white : Colors.black)),
-                ),
-                title: Text(isMe ? "Enes K." : "Öğrenci ${index + 1}", style: TextStyle(fontWeight: isMe ? FontWeight.bold : FontWeight.normal)),
-                trailing: Text("${30 - (index * 2)} Saat", style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                tileColor: isMe ? AppColors.primary.withValues(alpha: 0.1) : null,
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('leaderboard_points')
+                .orderBy('totalPoints', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSizes.p20),
+                    child: Text('Henüz çalışan öğrenci yok.\nİlk sen ol!'),
+                  ),
+                );
+              }
+
+              final docs = snapshot.data!.docs;
+
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: docs.length,
+                itemBuilder: (context, index) {
+                  final data = docs[index].data() as Map<String, dynamic>;
+                  final name = data['name'] ?? 'Bilinmeyen Öğrenci';
+                  final points = data['totalPoints'] ?? 0;
+                  bool isMe = name == "Ben (Demo)"; // Şimdilik isme göre kendimizi anlıyoruz
+
+                  Color rankColor;
+                  FontWeight fontWeight = FontWeight.bold;
+                  
+                  if (index == 0) {
+                    rankColor = const Color(0xFFFFD700); // Altın
+                  } else if (index == 1) {
+                    rankColor = const Color(0xFFC0C0C0); // Gümüş
+                  } else if (index == 2) {
+                    rankColor = const Color(0xFFCD7F32); // Bronz
+                  } else {
+                    rankColor = Colors.grey.shade600; // Gri
+                    fontWeight = FontWeight.normal;
+                  }
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: isMe ? AppColors.primary : rankColor.withValues(alpha: 0.2),
+                      child: Text(
+                        '${index + 1}',
+                        style: TextStyle(
+                          color: isMe ? Colors.white : rankColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      name,
+                      style: TextStyle(
+                        color: isMe ? Colors.black : rankColor,
+                        fontWeight: isMe ? FontWeight.bold : fontWeight,
+                        fontSize: index < 3 ? 18 : 16,
+                      ),
+                    ),
+                    trailing: Text(
+                      '$points dk',
+                      style: TextStyle(
+                        color: isMe ? AppColors.primary : rankColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    tileColor: isMe ? AppColors.primary.withValues(alpha: 0.1) : null,
+                  );
+                },
               );
             },
           ),
