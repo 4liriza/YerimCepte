@@ -115,6 +115,17 @@ class FirestoreService {
     }
   }
 
+  // Başarım kilidini aç
+  Future<void> unlockAchievement(String userId, String achievementId) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'achievements': FieldValue.arrayUnion([achievementId]),
+      });
+    } catch (e) {
+      debugPrint('Error unlocking achievement: $e');
+    }
+  }
+
   // Rezervasyon geçmişini getir
   Stream<List<ReservationModel>> getReservationHistory(String userId) {
     return _firestore

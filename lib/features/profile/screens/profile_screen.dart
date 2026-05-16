@@ -9,6 +9,7 @@ import 'edit_profile_screen.dart';
 import 'admin_panel_screen.dart';
 import '../widgets/avatar_picker_dialog.dart';
 import '../../../core/constants/avatar_constants.dart';
+import '../../../core/constants/achievement_constants.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 
 class ProfileScreen extends StatelessWidget {
@@ -223,7 +224,7 @@ class ProfileScreen extends StatelessWidget {
               // Rozetler
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSizes.p16),
-                child: Text("Kazanılan Rozetler", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: Text("Rozetler", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: AppSizes.p12),
               SizedBox(
@@ -231,12 +232,10 @@ class ProfileScreen extends StatelessWidget {
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
-                  children: [
-                    _buildBadge("Odak Ustası", Icons.center_focus_strong, AppColors.success),
-                    _buildBadge("Erken Kalkan", Icons.wb_sunny, AppColors.warning),
-                    _buildBadge("Kütüphane Kurdu", Icons.library_books, AppColors.primary),
-                    _buildBadge("Gece Kuşu", Icons.nights_stay, Colors.deepPurple),
-                  ],
+                  children: AchievementConstants.achievements.map((achievement) {
+                    final bool isEarned = user.achievements.contains(achievement.id);
+                    return _buildBadge(context, achievement, isEarned);
+                  }).toList(),
                 ),
               ),
 
@@ -392,21 +391,82 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBadge(String title, IconData icon, Color color) {
-    return Container(
-      width: 100,
-      margin: const EdgeInsets.only(right: AppSizes.p12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppSizes.r15),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+  Widget _buildBadge(BuildContext context, Achievement achievement, bool isEarned) {
+    final Color displayColor = isEarned ? achievement.color : Colors.grey;
+
+    return GestureDetector(
+      onTap: () => _showAchievementInfo(context, achievement, isEarned),
+      child: Container(
+        width: 100,
+        margin: const EdgeInsets.only(right: AppSizes.p12),
+        decoration: BoxDecoration(
+          color: displayColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppSizes.r15),
+          border: Border.all(color: displayColor.withValues(alpha: 0.3)),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(achievement.icon, color: displayColor, size: 32),
+                const SizedBox(height: 8),
+                Text(
+                  achievement.title, 
+                  textAlign: TextAlign.center, 
+                  style: TextStyle(
+                    fontSize: 12, 
+                    color: displayColor, 
+                    fontWeight: FontWeight.bold
+                  )
+                ),
+              ],
+            ),
+            if (!isEarned)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Icon(Icons.lock, size: 16, color: Colors.grey.withValues(alpha: 0.6)),
+              ),
+          ],
+        ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
-          Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  void _showAchievementInfo(BuildContext context, Achievement achievement, bool isEarned) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r20)),
+        title: Row(
+          children: [
+            Icon(achievement.icon, color: isEarned ? achievement.color : Colors.grey),
+            const SizedBox(width: 12),
+            Expanded(child: Text(achievement.title)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isEarned ? "Bu başarımı kazandın!" : "Bu başarım henüz kilitli.",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isEarned ? AppColors.success : AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(achievement.description),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Kapat"),
+          ),
         ],
       ),
     );

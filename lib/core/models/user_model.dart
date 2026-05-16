@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserModel {
   final String uid;
   final String name;
@@ -7,6 +9,9 @@ class UserModel {
   final int? currentTableId;
   final String? profileImage;
   final bool isAdmin;
+  final List<String> achievements;
+  final DateTime? lastSessionDate;
+  final int consecutiveDays;
 
   UserModel({
     required this.uid,
@@ -17,6 +22,9 @@ class UserModel {
     this.currentTableId,
     this.profileImage,
     this.isAdmin = false,
+    this.achievements = const [],
+    this.lastSessionDate,
+    this.consecutiveDays = 0,
   });
 
   factory UserModel.fromFirestore(Map<String, dynamic> data, String id) {
@@ -29,6 +37,9 @@ class UserModel {
       currentTableId: data['currentTableId'],
       profileImage: data['profileImage'],
       isAdmin: data['isAdmin'] ?? false,
+      achievements: List<String>.from(data['achievements'] ?? []),
+      lastSessionDate: data['lastSessionDate'] != null ? (data['lastSessionDate'] as Timestamp).toDate() : null,
+      consecutiveDays: data['consecutiveDays'] ?? 0,
     );
   }
 
@@ -41,6 +52,9 @@ class UserModel {
       'currentTableId': currentTableId,
       'profileImage': profileImage,
       'isAdmin': isAdmin,
+      'achievements': achievements,
+      'lastSessionDate': lastSessionDate != null ? Timestamp.fromDate(lastSessionDate!) : null,
+      'consecutiveDays': consecutiveDays,
     };
   }
 }

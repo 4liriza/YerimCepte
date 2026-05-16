@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'models/reservation_model.dart';
+import 'constants/achievement_constants.dart';
+import 'models/user_model.dart';
 
 class SessionManager extends ChangeNotifier {
   static final SessionManager _instance = SessionManager._internal();
@@ -121,6 +123,23 @@ class SessionManager extends ChangeNotifier {
       kalanSure = 20 * 60; // 20 dk mola hakkı resetlenir
       moladaMi = false;
       oturumBaslangicZamani = DateTime.now();
+      
+      // Başarım Kontrolleri
+      final now = DateTime.now();
+      
+      // Erken Kalkan: 06:00 - 08:00
+      if (now.hour >= 6 && now.hour < 8) {
+        _firestoreService.unlockAchievement(user.uid, AchievementConstants.erkenKalkanId);
+      }
+      
+      // Gece Kuşu: 00:00 - 03:00
+      if (now.hour >= 0 && now.hour < 3) {
+        _firestoreService.unlockAchievement(user.uid, AchievementConstants.geceKusuId);
+      }
+      
+      // Kütüphane Kurdu: Üst üste 7 gün
+      _checkKutuphaneKurdu(user.uid);
+
       notifyListeners();
     } catch (e) {
       debugPrint('Session start error: $e');
@@ -199,6 +218,14 @@ class SessionManager extends ChangeNotifier {
         status: isCancelled ? 'cancelled' : 'completed',
       );
 
+      // Odak Ustası: Ara vermeden 3 saat (180 dakika)
+      if (oturumBaslangicZamani != null && !isCancelled) {
+        final durationMinutes = DateTime.now().difference(oturumBaslangicZamani!).inMinutes;
+        if (durationMinutes >= 180) {
+          _firestoreService.unlockAchievement(user.uid, AchievementConstants.odakUstasiId);
+        }
+      }
+
       try {
         // Puanları güncelle
         if (kazanilanPuan > 0) {
@@ -268,6 +295,42 @@ class SessionManager extends ChangeNotifier {
         _mainTimer?.cancel();
         oturumuKapat(); // Mola süresi bitti, eşyalar toplanacak vs.
       }
+    });
+  }
+
+  Future<void> _checkKutuphaneKurdu(String userId) async {
+    final userModel = await _firestoreService.getUser(userId);
+    if (userModel == null) return;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    DateTime? lastSession = userModel.lastSessionDate;
+    int consecutive = userModel.consecutiveDays;
+
+    if (lastSession == null) {
+      consecutive = 1;
+    } else {
+      final lastDate = DateTime(lastSession.year, lastSession.month, lastSession.day);
+      final difference = today.difference(lastDate).inDays;
+
+      if (difference == 1) {
+        // Dün çalışmış, seriyi devam ettir
+        consecutive++;
+      } else if (difference > 1) {
+        // Ara vermiş, seriyi sıfırla
+        consecutive = 1;
+      }
+      // difference == 0 ise bugün zaten oturum açmış, bir şey yapma
+    }
+
+    if (consecutive >= 7) {
+      _firestoreService.unlockAchievement(userId, AchievementConstants.kutuphaneKurduId);
+    }
+
+    await _firestoreService.updateUser(userId, {
+      'lastSessionDate': Timestamp.fromDate(today),
+      'consecutiveDays': consecutive,
     });
   }
 }
