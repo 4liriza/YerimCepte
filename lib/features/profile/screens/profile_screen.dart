@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/services/firestore_service.dart';
@@ -253,95 +252,97 @@ class ProfileScreen extends StatelessWidget {
                 stream: FirestoreService().getTopUsers(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text("Henüz veri yok."));
-                  }
-
-// Haftanın Liderleri Başlığı (app dalından)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSizes.p16),
-            child: Text("Haftanın Liderleri", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(height: AppSizes.p12),
-
-          // Eğer veri yoksa boş ekran gösterimi (app dalından)
-          if (snapshot.data == null || snapshot.data!.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(AppSizes.p20),
-                child: Text('Henüz çalışan öğrenci yok.\nİlk sen ol!', textAlign: TextAlign.center),
-              ),
-            )
-          else ...[
-            // Senin asıl mantığın ve veri modelin (enes dalından)
-            Builder(
-              builder: (context) {
-                final topUsers = snapshot.data!;
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: topUsers.length,
-                  itemBuilder: (context, index) {
-                    final topUser = topUsers[index];
-                    bool isMe = topUser.uid == user.uid; // Gerçek ID kontrolü
-
-                    // app dalındaki Altın, Gümüş, Bronz renk mantığı
-                    Color rankColor;
-                    if (index == 0) {
-                      rankColor = const Color(0xFFFFD700); // Altın
-                    } else if (index == 1) {
-                      rankColor = const Color(0xFFC0C0C0); // Gümüş
-                    } else if (index == 2) {
-                      rankColor = const Color(0xFFCD7F32); // Bronz
-                    } else {
-                      rankColor = AppColors.textSecondary;
-                    }
-
-                    return ListTile(
-                      leading: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 30,
-                            child: Text("${index + 1}.", style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: index < 3 ? rankColor : AppColors.textSecondary,
-                            )),
-                          ),
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: isMe ? AppColors.primary.withValues(alpha: 0.2) : Colors.grey.shade200,
-                            backgroundImage: topUser.profileImage != null ? NetworkImage(topUser.profileImage!) : null,
-                            child: topUser.profileImage == null ? const Icon(Icons.person, size: 20) : null,
-                          ),
-                        ],
-                      ),
-                      title: Text(
-                        topUser.name, 
-                        style: TextStyle(
-                          fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
-                          fontSize: index < 3 ? 18 : 16,
-                        ),
-                      ),
-                      subtitle: Text("Seviye ${(topUser.points / 500).floor() + 1}"),
-                      trailing: Text(
-                        "${topUser.points} XP", 
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold, 
-                          color: isMe ? AppColors.primary : rankColor
-                        ),
-                      ),
-                      tileColor: isMe ? AppColors.primary.withValues(alpha: 0.1) : null,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r12)),
+                    return const Padding(
+                      padding: EdgeInsets.all(AppSizes.p20),
+                      child: Center(child: CircularProgressIndicator()),
                     );
-                  },
-                );
-              }
-            ),
-            const SizedBox(height: AppSizes.p32),
-          ],
+                  }
+                  
+                  final topUsers = snapshot.data;
+                  if (topUsers == null || topUsers.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(AppSizes.p20),
+                      child: Center(
+                        child: Text(
+                          'Henüz çalışan öğrenci yok.\nİlk sen ol!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: topUsers.length,
+                    padding: const EdgeInsets.symmetric(horizontal: AppSizes.p16),
+                    itemBuilder: (context, index) {
+                      final topUser = topUsers[index];
+                      bool isMe = topUser.uid == user.uid;
+
+                      Color rankColor;
+                      if (index == 0) {
+                        rankColor = const Color(0xFFFFD700); // Altın
+                      } else if (index == 1) {
+                        rankColor = const Color(0xFFC0C0C0); // Gümüş
+                      } else if (index == 2) {
+                        rankColor = const Color(0xFFCD7F32); // Bronz
+                      } else {
+                        rankColor = AppColors.textSecondary;
+                      }
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: AppSizes.p8),
+                        decoration: BoxDecoration(
+                          color: isMe ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
+                          borderRadius: BorderRadius.circular(AppSizes.r12),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 5, offset: const Offset(0, 2)),
+                          ],
+                        ),
+                        child: ListTile(
+                          leading: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 30,
+                                child: Text("${index + 1}.", style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: index < 3 ? rankColor : AppColors.textSecondary,
+                                )),
+                              ),
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: isMe ? AppColors.primary.withValues(alpha: 0.2) : Colors.grey.shade200,
+                                backgroundImage: topUser.profileImage != null ? NetworkImage(topUser.profileImage!) : null,
+                                child: topUser.profileImage == null ? const Icon(Icons.person, size: 20) : null,
+                              ),
+                            ],
+                          ),
+                          title: Text(
+                            topUser.name, 
+                            style: TextStyle(
+                              fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
+                              fontSize: index < 3 ? 18 : 16,
+                            ),
+                          ),
+                          subtitle: Text("Seviye ${(topUser.points / 500).floor() + 1}"),
+                          trailing: Text(
+                            "${topUser.points} XP", 
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold, 
+                              color: isMe ? AppColors.primary : rankColor
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+              const SizedBox(height: AppSizes.p32),
+            ],
           ),
         );
       },

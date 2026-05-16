@@ -145,7 +145,7 @@ class SessionManager extends ChangeNotifier {
   }
 
 
-  void oturumuKapat() async {
+  Future<void> oturumuKapat() async {
     if (oturdugumMasa != null) {
       int? tableId = int.tryParse(oturdugumMasa!.replaceAll('Masa ', ''));
       if (tableId != null) {
@@ -154,11 +154,11 @@ class SessionManager extends ChangeNotifier {
           'currentUserId': null,
           'isFull': false,
           'reservationTime': null,
-  void oturumuKapat() {
-    // BURASI ASYNC OLMALI. Lütfen alttaki oturumuKapatAsync'i kullanın veya 
-    // bunu async yapıp Firebase'e yazın.
-    // Wait, let's just make it async and add the logic.
-    _oturumuKapatVePuanEkle();
+          'breakStartTime': null,
+        });
+      }
+    }
+    await _oturumuKapatVePuanEkle();
   }
 
   Future<void> _oturumuKapatVePuanEkle() async {
