@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'models/reservation_model.dart';
 
 class SessionManager extends ChangeNotifier {
   static final SessionManager _instance = SessionManager._internal();
@@ -27,34 +28,42 @@ class SessionManager extends ChangeNotifier {
   Timer? _mainTimer;
   VoidCallback? onReservationExpired;
 
+  int? _activeTableId;
+  int? get activeTableId => _activeTableId;
+
   // Uygulama açılışında buluttaki durumu kontrol et
   Future<void> syncWithCloud() async {
     final user = _auth.currentUser;
     if (user != null) {
-      final activeTable = await _firestoreService.getUserActiveTable(user.uid);
-      if (activeTable != null) {
-        oturdugumMasa = 'Masa ${activeTable.id}';
-        isQrScanned = activeTable.status == 'occupied';
-        reservationStartTime = activeTable.reservationTime;
-        
-        // Mola durumu kontrolü
-        if (activeTable.breakStartTime != null) {
-          moladaMi = true;
-          final diff = DateTime.now().difference(activeTable.breakStartTime!);
-          final elapsedSeconds = diff.inSeconds;
-          kalanSure = (20 * 60) - elapsedSeconds;
+      try {
+        final activeTable = await _firestoreService.getUserActiveTable(user.uid);
+        if (activeTable != null) {
+          _activeTableId = activeTable.id;
+          oturdugumMasa = 'Masa ${activeTable.id}';
+          isQrScanned = activeTable.status == 'occupied';
+          reservationStartTime = activeTable.reservationTime;
           
-          if (kalanSure <= 0) {
-            oturumuKapat();
-          } else {
-            _startBreakTimer();
+          // Mola durumu kontrolü
+          if (activeTable.breakStartTime != null) {
+            moladaMi = true;
+            final diff = DateTime.now().difference(activeTable.breakStartTime!);
+            final elapsedSeconds = diff.inSeconds;
+            kalanSure = (20 * 60) - elapsedSeconds;
+            
+            if (kalanSure <= 0) {
+              await oturumuKapat();
+            } else {
+              _startBreakTimer();
+            }
           }
-        }
 
-        if (!isQrScanned && reservationStartTime != null) {
-          _startBackgroundChecker();
+          if (!isQrScanned && reservationStartTime != null) {
+            _startBackgroundChecker();
+          }
+          notifyListeners();
         }
-        notifyListeners();
+      } catch (e) {
+        debugPrint('Sync error: $e');
       }
     }
   }
@@ -64,25 +73,25 @@ class SessionManager extends ChangeNotifier {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    await _firestoreService.updateTableStatus(tableId, {
-      'status': 'reserved',
-      'currentUserId': user.uid,
-      'isFull': true,
-      'reservationTime': startTime,
-      'breakStartTime': null,
-    });
+    try {
+      await _firestoreService.updateTableStatus(tableId, {
+        'status': 'reserved',
+        'currentUserId': user.uid,
+        'isFull': true,
+        'reservationTime': startTime,
+        'breakStartTime': null,
+      });
 
-    oturdugumMasa = 'Masa $tableId';
-    isQrScanned = false;
-    reservationStartTime = startTime;
-    reservationCountdown = 10 * 60; // 10 dk tolerans
-    _startBackgroundChecker();
-    notifyListeners();
-  }
-  
-  int? get activeTableId {
-    if (oturdugumMasa == null) return null;
-    return int.tryParse(oturdugumMasa!.replaceAll('Masa ', ''));
+      _activeTableId = tableId;
+      oturdugumMasa = 'Masa $tableId';
+      isQrScanned = false;
+      reservationStartTime = startTime;
+      reservationCountdown = 10 * 60; // 10 dk tolerans
+      _startBackgroundChecker();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Reservation error: $e');
+    }
   }
 
   // Anlık QR Okutma (Kütüphanedeyken Direkt) veya Rezervasyon Onayı
@@ -91,64 +100,71 @@ class SessionManager extends ChangeNotifier {
     if (user == null) return;
 
     // Eğer tableId verilmemişse mevcut rezervasyonu kullanmaya çalış
-    int? finalTableId = tableId ?? activeTableId;
+    int? finalTableId = tableId ?? _activeTableId;
     
     if (finalTableId == null) return;
 
-    await _firestoreService.updateTableStatus(finalTableId, {
-      'status': 'occupied',
-      'currentUserId': user.uid,
-      'isFull': true,
-      'reservationTime': null,
-      'breakStartTime': null,
-    });
+    try {
+      await _firestoreService.updateTableStatus(finalTableId, {
+        'status': 'occupied',
+        'currentUserId': user.uid,
+        'isFull': true,
+        'reservationTime': null,
+        'breakStartTime': null,
+      });
 
-    oturdugumMasa = 'Masa $finalTableId';
-    isQrScanned = true;
-    reservationStartTime = null;
-    _mainTimer?.cancel();
-    kalanSure = 20 * 60; // 20 dk mola hakkı resetlenir
-    moladaMi = false;
-    oturumBaslangicZamani = DateTime.now();
-    notifyListeners();
+      _activeTableId = finalTableId;
+      oturdugumMasa = 'Masa $finalTableId';
+      isQrScanned = true;
+      reservationStartTime = null;
+      _mainTimer?.cancel();
+      kalanSure = 20 * 60; // 20 dk mola hakkı resetlenir
+      moladaMi = false;
+      oturumBaslangicZamani = DateTime.now();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Session start error: $e');
+    }
   }
 
   // Turnikeden Çıkış (Otomatik Mola) Simülasyonu
   void otomatikMolaBaslat() async {
-    if (isQrScanned && !moladaMi) {
-      int? tableId = int.tryParse(oturdugumMasa!.replaceAll('Masa ', ''));
-      if (tableId != null) {
+    if (isQrScanned && !moladaMi && _activeTableId != null) {
+      try {
         final now = DateTime.now();
-        await _firestoreService.updateTableStatus(tableId, {
+        await _firestoreService.updateTableStatus(_activeTableId!, {
           'breakStartTime': now,
         });
         moladaMi = true;
         _startBreakTimer();
         notifyListeners();
+      } catch (e) {
+        debugPrint('Break start error: $e');
       }
     }
   }
 
   void molaBitir() async {
-    if (moladaMi) {
-      int? tableId = int.tryParse(oturdugumMasa!.replaceAll('Masa ', ''));
-      if (tableId != null) {
-        await _firestoreService.updateTableStatus(tableId, {
+    if (moladaMi && _activeTableId != null) {
+      try {
+        await _firestoreService.updateTableStatus(_activeTableId!, {
           'breakStartTime': null,
         });
         moladaMi = false;
-        kalanSure = 20 * 60; // Geri dönüldüğünde mola süresi resetlenir (veya istersen saklanabilir)
+        kalanSure = 20 * 60; // Geri dönüldüğünde mola süresi resetlenir
         _mainTimer?.cancel();
         notifyListeners();
+      } catch (e) {
+        debugPrint('Break end error: $e');
       }
     }
   }
 
 
-  Future<void> oturumuKapat() async {
-    if (oturdugumMasa != null) {
-      int? tableId = int.tryParse(oturdugumMasa!.replaceAll('Masa ', ''));
-      if (tableId != null) {
+  Future<void> oturumuKapat({bool isCancelled = false}) async {
+    final int? tableId = _activeTableId;
+    if (tableId != null) {
+      try {
         await _firestoreService.updateTableStatus(tableId, {
           'status': 'available',
           'currentUserId': null,
@@ -156,30 +172,60 @@ class SessionManager extends ChangeNotifier {
           'reservationTime': null,
           'breakStartTime': null,
         });
+      } catch (e) {
+        debugPrint('Session close Firestore error: $e');
       }
     }
-    await _oturumuKapatVePuanEkle();
+    await _oturumuKapatVePuanEkle(tableId: tableId, isCancelled: isCancelled);
   }
 
-  Future<void> _oturumuKapatVePuanEkle() async {
-    if (oturumBaslangicZamani != null) {
-      int kazanilanPuan = DateTime.now().difference(oturumBaslangicZamani!).inMinutes;
-      if (kazanilanPuan > 0) {
-        String myUserId = "demo_kullanici"; // Gerçek projede auth
-        DocumentReference userDoc = FirebaseFirestore.instance.collection('leaderboard_points').doc(myUserId);
-        
-        await FirebaseFirestore.instance.runTransaction((transaction) async {
-          DocumentSnapshot snapshot = await transaction.get(userDoc);
-          if (!snapshot.exists) {
-            transaction.set(userDoc, {'name': 'Ben (Demo)', 'totalPoints': kazanilanPuan});
-          } else {
-            int mevcutPuan = (snapshot.data() as Map<String, dynamic>)['totalPoints'] ?? 0;
-            transaction.update(userDoc, {'totalPoints': mevcutPuan + kazanilanPuan});
-          }
-        });
+  Future<void> _oturumuKapatVePuanEkle({int? tableId, bool isCancelled = false}) async {
+    final user = _auth.currentUser;
+    if (user != null && tableId != null) {
+      int kazanilanPuan = 0;
+      if (oturumBaslangicZamani != null && !isCancelled) {
+        kazanilanPuan = DateTime.now().difference(oturumBaslangicZamani!).inMinutes;
+        if (kazanilanPuan < 0) kazanilanPuan = 0;
+      }
+
+      // Rezervasyon Kaydı Oluştur
+      final record = ReservationModel(
+        id: '', // Firestore auto-id
+        userId: user.uid,
+        tableId: tableId,
+        startTime: oturumBaslangicZamani ?? reservationStartTime ?? DateTime.now(),
+        endTime: DateTime.now(),
+        earnedPoints: kazanilanPuan,
+        status: isCancelled ? 'cancelled' : 'completed',
+      );
+
+      try {
+        // Puanları güncelle
+        if (kazanilanPuan > 0) {
+          await _firestoreService.updateUser(user.uid, {
+            'points': FieldValue.increment(kazanilanPuan),
+            'totalStudyTime': FieldValue.increment(kazanilanPuan),
+          });
+        }
+        // Geçmişe ekle
+        await _firestoreService.addReservationRecord(record);
+      } catch (e) {
+        debugPrint('Error saving session record: $e');
       }
     }
 
+    _activeTableId = null;
+    oturdugumMasa = null;
+    moladaMi = false;
+    isQrScanned = false;
+    reservationStartTime = null;
+    oturumBaslangicZamani = null;
+    _mainTimer?.cancel();
+    notifyListeners();
+  }
+
+  void reset() {
+    _activeTableId = null;
     oturdugumMasa = null;
     moladaMi = false;
     isQrScanned = false;
@@ -202,7 +248,7 @@ class SessionManager extends ChangeNotifier {
           } else {
             // Tolerans bitti, iptal et
             _mainTimer?.cancel();
-            oturumuKapat();
+            oturumuKapat(isCancelled: true);
             if (onReservationExpired != null) {
               onReservationExpired!();
             }

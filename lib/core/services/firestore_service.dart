@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/table_model.dart';
 import '../models/user_model.dart';
 import '../models/announcement_model.dart';
@@ -11,58 +12,86 @@ class FirestoreService {
   Stream<List<TableModel>> getTables() {
     return _firestore.collection('tables').orderBy('id').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => TableModel.fromMap(doc.data())).toList();
+    }).handleError((error) {
+      debugPrint('Error fetching tables: $error');
+      return <TableModel>[];
     });
   }
 
   // Masa durumunu güncelle (Rezerve et, oturumu aç, mola baslat vb.)
   Future<void> updateTableStatus(int tableId, Map<String, dynamic> data) async {
-    final query = await _firestore.collection('tables').where('id', isEqualTo: tableId).get();
-    if (query.docs.isNotEmpty) {
-      await query.docs.first.reference.update(data);
+    try {
+      final query = await _firestore.collection('tables').where('id', isEqualTo: tableId).get();
+      if (query.docs.isNotEmpty) {
+        await query.docs.first.reference.update(data);
+      }
+    } catch (e) {
+      debugPrint('Error updating table status: $e');
+      rethrow;
     }
   }
 
   // Kullanıcının aktif bir rezervasyonu olup olmadığını kontrol et
   Future<TableModel?> getUserActiveTable(String userId) async {
-    final query = await _firestore
-        .collection('tables')
-        .where('currentUserId', isEqualTo: userId)
-        .get();
-    
-    if (query.docs.isNotEmpty) {
-      return TableModel.fromMap(query.docs.first.data());
+    try {
+      final query = await _firestore
+          .collection('tables')
+          .where('currentUserId', isEqualTo: userId)
+          .get();
+      
+      if (query.docs.isNotEmpty) {
+        return TableModel.fromMap(query.docs.first.data());
+      }
+    } catch (e) {
+      debugPrint('Error getting user active table: $e');
     }
     return null;
   }
 
   // Kullanıcı verilerini canlı takip et
   Stream<UserModel?> streamUser(String userId) {
+    if (userId.isEmpty) return Stream.value(null);
     return _firestore.collection('users').doc(userId).snapshots().map((snapshot) {
-      if (snapshot.exists) {
+      if (snapshot.exists && snapshot.data() != null) {
         return UserModel.fromFirestore(snapshot.data()!, snapshot.id);
       }
+      return null;
+    }).handleError((error) {
+      debugPrint('Error streaming user: $error');
       return null;
     });
   }
 
   // Kullanıcı verilerini bir kez getir
   Future<UserModel?> getUser(String userId) async {
-    final doc = await _firestore.collection('users').doc(userId).get();
-    if (doc.exists) {
-      return UserModel.fromFirestore(doc.data()!, doc.id);
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (doc.exists && doc.data() != null) {
+        return UserModel.fromFirestore(doc.data()!, doc.id);
+      }
+    } catch (e) {
+      debugPrint('Error getting user: $e');
     }
     return null;
   }
 
   // Yeni kullanıcı dökümanı oluştur
   Future<void> createUser(UserModel user) async {
-    await _firestore.collection('users').doc(user.uid).set(user.toFirestore());
+    try {
+      await _firestore.collection('users').doc(user.uid).set(user.toFirestore());
+    } catch (e) {
+      debugPrint('Error creating user: $e');
+      rethrow;
+    }
   }
 
   // Duyuruları getir
   Stream<List<AnnouncementModel>> getAnnouncements() {
     return _firestore.collection('announcements').orderBy('date', descending: true).snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => AnnouncementModel.fromFirestore(doc.data(), doc.id)).toList();
+    }).handleError((error) {
+      debugPrint('Error fetching announcements: $error');
+      return <AnnouncementModel>[];
     });
   }
 
@@ -70,12 +99,20 @@ class FirestoreService {
   Stream<List<UserModel>> getTopUsers() {
     return _firestore.collection('users').orderBy('points', descending: true).limit(10).snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => UserModel.fromFirestore(doc.data(), doc.id)).toList();
+    }).handleError((error) {
+      debugPrint('Error fetching top users: $error');
+      return <UserModel>[];
     });
   }
 
-  // Kullanıcı bilgilerini güncelle (Profil düzenleme)
+  // Kullanıcı bilgilerini güncelle (Profil düzenleme, puan ekleme vb.)
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
-    await _firestore.collection('users').doc(uid).update(data);
+    try {
+      await _firestore.collection('users').doc(uid).update(data);
+    } catch (e) {
+      debugPrint('Error updating user: $e');
+      rethrow;
+    }
   }
 
   // Rezervasyon geçmişini getir
@@ -87,31 +124,55 @@ class FirestoreService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) => ReservationModel.fromFirestore(doc.data(), doc.id)).toList();
+    }).handleError((error) {
+      debugPrint('Error fetching reservation history: $error');
+      return <ReservationModel>[];
     });
   }
 
   // Admin: Yeni duyuru ekle
   Future<void> addAnnouncement(AnnouncementModel announcement) async {
-    await _firestore.collection('announcements').add({
-      'title': announcement.title,
-      'content': announcement.content,
-      'date': Timestamp.fromDate(announcement.date),
-      'imageUrl': announcement.imageUrl,
-    });
+    try {
+      await _firestore.collection('announcements').add({
+        'title': announcement.title,
+        'content': announcement.content,
+        'date': Timestamp.fromDate(announcement.date),
+        'imageUrl': announcement.imageUrl,
+      });
+    } catch (e) {
+      debugPrint('Error adding announcement: $e');
+      rethrow;
+    }
   }
 
   // Admin: Duyuru sil
   Future<void> deleteAnnouncement(String id) async {
-    await _firestore.collection('announcements').doc(id).delete();
+    try {
+      await _firestore.collection('announcements').doc(id).delete();
+    } catch (e) {
+      debugPrint('Error deleting announcement: $e');
+      rethrow;
+    }
   }
 
   // Admin: Yeni masa ekle
   Future<void> addTable(TableModel table) async {
-    await _firestore.collection('tables').add(table.toMap());
+    try {
+      await _firestore.collection('tables').add(table.toMap());
+    } catch (e) {
+      debugPrint('Error adding table: $e');
+      rethrow;
+    }
   }
 
   // Rezervasyon Kaydı Ekle (Oturum bittiğinde çağrılır)
   Future<void> addReservationRecord(ReservationModel record) async {
-    await _firestore.collection('reservations_history').add(record.toFirestore());
+    try {
+      await _firestore.collection('reservations_history').add(record.toFirestore());
+    } catch (e) {
+      debugPrint('Error adding reservation record: $e');
+      rethrow;
+    }
   }
 }
+
