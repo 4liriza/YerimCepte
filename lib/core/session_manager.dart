@@ -5,7 +5,6 @@ import 'services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'models/reservation_model.dart';
 import 'constants/achievement_constants.dart';
-import 'models/user_model.dart';
 
 class SessionManager extends ChangeNotifier {
   static final SessionManager _instance = SessionManager._internal();
@@ -126,6 +125,9 @@ class SessionManager extends ChangeNotifier {
       
       // Başarım Kontrolleri
       final now = DateTime.now();
+
+      // İlk Gün Başarımı
+      _firestoreService.unlockAchievement(user.uid, AchievementConstants.ilkGunId);
       
       // Erken Kalkan: 06:00 - 08:00
       if (now.hour >= 6 && now.hour < 8) {

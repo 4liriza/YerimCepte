@@ -22,8 +22,16 @@ class AchievementConstants {
   static const String erkenKalkanId = 'erken_kalkan';
   static const String kutuphaneKurduId = 'kutuphane_kurdu';
   static const String geceKusuId = 'gece_kusu';
+  static const String ilkGunId = 'ilk_gun';
 
   static const List<Achievement> achievements = [
+    Achievement(
+      id: ilkGunId,
+      title: 'İlk Gün',
+      description: 'İlk kütüphane oturumunu başlatarak bu başarımı kazanabilirsin.',
+      icon: Icons.celebration,
+      color: Colors.orange,
+    ),
     Achievement(
       id: odakUstasiId,
       title: 'Odak Ustası',
