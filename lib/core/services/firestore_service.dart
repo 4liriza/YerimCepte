@@ -192,6 +192,34 @@ class FirestoreService {
     }
   }
 
+  // Admin: Tüm masaları sıfırla (Bütün oturumları ve rezervasyonları iptal eder)
+  Future<void> resetAllTables() async {
+    try {
+      final WriteBatch batch = _firestore.batch();
+      final querySnapshot = await _firestore.collection('tables').get();
+      
+      for (var doc in querySnapshot.docs) {
+        batch.update(doc.reference, {
+          'status': 'available',
+          'currentUserId': null,
+          'isFull': false,
+          'reservationTime': null,
+          'breakStartTime': null,
+          'sessionStartTime': null,
+          'nextReservationUserId': null,
+          'nextReservationTime': null,
+          'futureReservations': [],
+          'futureReservationUserIds': [],
+        });
+      }
+      
+      await batch.commit();
+    } catch (e) {
+      debugPrint('Error resetting all tables: $e');
+      rethrow;
+    }
+  }
+
   // Rezervasyon Kaydı Ekle (Oturum bittiğinde çağrılır)
   Future<void> addReservationRecord(ReservationModel record) async {
     try {

@@ -37,56 +37,96 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
+  Future<void> _resetAllTables() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Emin misiniz?"),
+        content: const Text("Tüm aktif oturumlar sonlandırılacak ve gelecek tüm rezervasyonlar iptal edilecek. Bu işlem geri alınamaz."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("İptal")),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text("Sıfırla"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() => _isLoading = true);
+      try {
+        await FirestoreService().resetAllTables();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Tüm masalar başarıyla sıfırlandı.")));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Hata oluştu: $e"), backgroundColor: AppColors.error));
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Yönetici Paneli")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSizes.p20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Yeni Duyuru Yayınla", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: AppSizes.p16),
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: "Başlık", border: OutlineInputBorder()),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSizes.p20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Yeni Duyuru Yayınla", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: AppSizes.p16),
+                TextField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(labelText: "Başlık", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: AppSizes.p12),
+                TextField(
+                  controller: _contentController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(labelText: "İçerik", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: AppSizes.p16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _addAnnouncement,
+                    child: const Text("Yayınla"),
+                  ),
+                ),
+                const Divider(height: AppSizes.p48),
+                const Text("Sistem Yönetimi", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: AppSizes.p16),
+                ListTile(
+                  leading: const Icon(Icons.refresh, color: AppColors.primary),
+                  title: const Text("Tüm Masaları Sıfırla"),
+                  subtitle: const Text("Tüm masaları 'boş' durumuna getirir."),
+                  onTap: _isLoading ? null : _resetAllTables,
+                ),
+                ListTile(
+                  leading: const Icon(Icons.add_box_outlined, color: AppColors.success),
+                  title: const Text("Yeni Masa Ekle"),
+                  onTap: () {
+                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Masa eklendi (Simülasyon).")));
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: AppSizes.p12),
-            TextField(
-              controller: _contentController,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: "İçerik", border: OutlineInputBorder()),
+          ),
+          if (_isLoading)
+            Container(
+              color: Colors.black26,
+              child: const Center(child: CircularProgressIndicator()),
             ),
-            const SizedBox(height: AppSizes.p16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _addAnnouncement,
-                child: _isLoading ? const CircularProgressIndicator() : const Text("Yayınla"),
-              ),
-            ),
-            const Divider(height: AppSizes.p48),
-            const Text("Sistem Yönetimi", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: AppSizes.p16),
-            ListTile(
-              leading: const Icon(Icons.refresh, color: AppColors.primary),
-              title: const Text("Tüm Masaları Sıfırla"),
-              subtitle: const Text("Tüm masaları 'boş' durumuna getirir."),
-              onTap: () {
-                // Bu özellik için tüm masaları döngüye sokacak bir metod servis katmanına eklenebilir
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bu özellik yakında eklenecek.")));
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.add_box_outlined, color: AppColors.success),
-              title: const Text("Yeni Masa Ekle"),
-              onTap: () {
-                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Masa eklendi (Simülasyon).")));
-              },
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
