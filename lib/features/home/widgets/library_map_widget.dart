@@ -88,22 +88,30 @@ class LibraryMapWidget extends StatelessWidget {
                         isEffectivelyFull = true;
                       }
 
+                      // Determine if the table matches the filter or if no filter is active
+                      bool matchesFilter = activeFilter == "Hepsi" || isHighlighted;
+
+                      Color tableColor;
+                      if (!matchesFilter) {
+                        tableColor = Colors.grey.shade400;
+                      } else {
+                        tableColor = isEffectivelyFull ? AppColors.error : AppColors.success;
+                      }
+
                       return Positioned(
                         left: pos.dx * cellSize + (cellSize * 0.1),
                         top: pos.dy * cellSize + (cellSize * 0.1),
                         child: GestureDetector(
-                          onTap: () => onTableTap(table),
+                          onTap: matchesFilter ? () => onTableTap(table) : null,
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             width: cellSize * 0.8,
                             height: cellSize * 0.8,
                             decoration: BoxDecoration(
-                              color: isEffectivelyFull
-                                  ? AppColors.error
-                                  : AppColors.success,
+                              color: tableColor,
                               borderRadius: BorderRadius.circular(8),
                               boxShadow: [
-                                if (isHighlighted)
+                                if (isHighlighted && activeFilter != "Hepsi")
                                   BoxShadow(
                                     color: AppColors.primary.withValues(
                                       alpha: 0.6,
@@ -118,13 +126,12 @@ class LibraryMapWidget extends StatelessWidget {
                                 ),
                               ],
                               border: Border.all(
-                                color: isHighlighted
+                                color: (isHighlighted && activeFilter != "Hepsi")
                                     ? Colors.yellow
                                     : Colors.white,
-                                width: isHighlighted ? 3 : 1,
+                                width: (isHighlighted && activeFilter != "Hepsi") ? 3 : 1,
                               ),
-                            ),
-                            child: Center(
+                            ),                            child: Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
