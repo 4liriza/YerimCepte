@@ -19,25 +19,43 @@ class _LibraryMapScreenState extends State<LibraryMapScreen> {
   String _activeFilter = AppStrings.filterAll;
   final FirestoreService _firestoreService = FirestoreService();
 
-  void _onTableTap(TableModel table) {
+  void _onTableTap(TableModel table) async {
+    final session = SessionManager();
+    final user = session.currentUser;
+    if (user == null) return;
+
+    // Admin check: fetch user data to check isAdmin
+    final userModel = await _firestoreService.getUser(user.uid);
+    if (userModel?.isAdmin == true) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Yöneticiler rezervasyon yapamaz.')),
+        );
+      }
+      return;
+    }
+
     bool isEffectivelyFull = table.isFull;
     if (table.nextReservationTime != null && DateTime.now().isAfter(table.nextReservationTime!)) {
       isEffectivelyFull = true;
     }
 
     if (isEffectivelyFull) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bu masa dolu.'), backgroundColor: AppColors.error),
-      );
-    } else {
-      final session = SessionManager();
-      if (session.activeTableId != null || session.reservationStartTime != null) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Zaten aktif bir masanız veya rezervasyonunuz var.'), 
-            backgroundColor: AppColors.error
-          ),
+          const SnackBar(content: Text('Bu masa dolu.'), backgroundColor: AppColors.error),
         );
+      }
+    } else {
+      if (session.activeTableId != null || session.reservationStartTime != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Zaten aktif bir masanız veya rezervasyonunuz var.'), 
+              backgroundColor: AppColors.error
+            ),
+          );
+        }
         return;
       }
       _showReservationDialog(table);

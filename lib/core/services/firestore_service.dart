@@ -111,9 +111,15 @@ class FirestoreService {
     });
   }
 
-  // En yüksek puanlı 10 kullanıcıyı getir (Liderlik Tablosu)
+  // En yüksek puanlı 10 kullanıcıyı getir (Liderlik Tablosu) - Adminleri filtrele
   Stream<List<UserModel>> getTopUsers() {
-    return _firestore.collection('users').orderBy('points', descending: true).limit(10).snapshots().map((snapshot) {
+    return _firestore
+        .collection('users')
+        .where('isAdmin', isEqualTo: false)
+        .orderBy('points', descending: true)
+        .limit(10)
+        .snapshots()
+        .map((snapshot) {
       return snapshot.docs.map((doc) => UserModel.fromFirestore(doc.data(), doc.id)).toList();
     }).handleError((error) {
       debugPrint('Error fetching top users: $error');
