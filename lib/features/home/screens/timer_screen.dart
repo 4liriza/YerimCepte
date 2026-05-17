@@ -29,10 +29,16 @@ class TimerScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(Icons.timer_outlined, size: 80, color: AppColors.primary),
+                const Icon(
+                  Icons.timer_outlined,
+                  size: 80,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(height: AppSizes.p24),
                 Text(
-                  session.moladaMi ? AppStrings.timerBreakTitle : AppStrings.timerActiveTitle,
+                  session.moladaMi
+                      ? AppStrings.timerBreakTitle
+                      : AppStrings.timerActiveTitle,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 28,
@@ -53,7 +59,9 @@ class TimerScreen extends StatelessWidget {
                           strokeWidth: 15,
                           backgroundColor: Colors.grey.shade200,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            session.moladaMi ? AppColors.warning : AppColors.primary,
+                            session.moladaMi
+                                ? AppColors.warning
+                                : AppColors.primary,
                           ),
                         ),
                       ),
@@ -65,7 +73,9 @@ class TimerScreen extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 48,
                               fontWeight: FontWeight.bold,
-                              color: session.moladaMi ? AppColors.warning : AppColors.primary,
+                              color: session.moladaMi
+                                  ? AppColors.warning
+                                  : AppColors.primary,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -94,13 +104,25 @@ class TimerScreen extends StatelessWidget {
                             session.otomatikMolaBaslat();
                           }
                         },
-                        icon: Icon(session.moladaMi ? Icons.play_arrow : Icons.pause),
-                        label: Text(session.moladaMi ? "Molayı Bitir" : "Mola Ver (20 dk)"),
+                        icon: Icon(
+                          session.moladaMi ? Icons.pause : Icons.play_arrow,
+                        ),
+                        label: Text(
+                          session.moladaMi
+                              ? "Molayı Bitir"
+                              : "Mola Ver (20 dk)",
+                        ),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: AppSizes.p16),
-                          backgroundColor: session.moladaMi ? AppColors.success : AppColors.warning,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSizes.p16,
+                          ),
+                          backgroundColor: session.moladaMi
+                              ? AppColors.warning
+                              : AppColors.success,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r15)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.r15),
+                          ),
                         ),
                       ),
                     ),
@@ -113,10 +135,14 @@ class TimerScreen extends StatelessWidget {
                         icon: const Icon(Icons.exit_to_app),
                         label: const Text(AppStrings.endSessionButton),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: AppSizes.p16),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSizes.p16,
+                          ),
                           backgroundColor: AppColors.error,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r15)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.r15),
+                          ),
                         ),
                       ),
                     ),
@@ -128,7 +154,11 @@ class TimerScreen extends StatelessWidget {
                   onPressed: () {
                     session.otomatikMolaBaslat();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Turnikeden Çıkış Algılandı! Otomatik Mola Başladı."))
+                      const SnackBar(
+                        content: Text(
+                          "Turnikeden Çıkış Algılandı! Otomatik Mola Başladı.",
+                        ),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.directions_walk),
@@ -137,14 +167,16 @@ class TimerScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: AppSizes.p12),
                     foregroundColor: Colors.deepPurple,
                     side: const BorderSide(color: Colors.deepPurple),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r15)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.r15),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         );
-      }
+      },
     );
   }
 
@@ -152,13 +184,21 @@ class TimerScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Oturumu Sonlandır', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Oturumu Sonlandır',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: const Text(AppStrings.endSessionConfirm),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r15)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.r15),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(AppStrings.cancelButton, style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              AppStrings.cancelButton,
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -167,7 +207,9 @@ class TimerScreen extends StatelessWidget {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSizes.r8),
+              ),
             ),
             child: const Text('Evet, Ayrılıyorum'),
           ),
