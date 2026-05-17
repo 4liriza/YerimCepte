@@ -5,7 +5,8 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_sizes.dart';
 
 class TimerScreen extends StatelessWidget {
-  const TimerScreen({super.key});
+  final VoidCallback? onNavigateHome;
+  const TimerScreen({super.key, this.onNavigateHome});
 
   String _formatTime(int seconds) {
     int m = seconds ~/ 60;
@@ -204,6 +205,7 @@ class TimerScreen extends StatelessWidget {
             onPressed: () {
               SessionManager().oturumuKapat();
               Navigator.pop(context);
+              if (onNavigateHome != null) onNavigateHome!();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,

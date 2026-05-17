@@ -6,7 +6,8 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_sizes.dart';
 
 class QrScannerScreen extends StatefulWidget {
-  const QrScannerScreen({super.key});
+  final VoidCallback? onNavigateHome;
+  const QrScannerScreen({super.key, this.onNavigateHome});
 
   @override
   State<QrScannerScreen> createState() => _QrScannerScreenState();
@@ -81,7 +82,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           
           // Helper Text
           Positioned(
-            bottom: 60,
+            bottom: 100,
             left: 0,
             right: 0,
             child: Center(
@@ -97,6 +98,38 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 ),
               ),
             ),
+          ),
+          
+          // İptal Butonu
+          ListenableBuilder(
+            listenable: SessionManager(),
+            builder: (context, _) {
+              final session = SessionManager();
+              if (session.reservationStartTime != null && !session.isQrScanned) {
+                return Positioned(
+                  bottom: 30,
+                  left: 24,
+                  right: 24,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      session.oturumuKapat(isCancelled: true);
+                      if (widget.onNavigateHome != null) {
+                        widget.onNavigateHome!();
+                      }
+                    },
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text("Rezervasyonu İptal Et", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: AppSizes.p16),
+                      backgroundColor: AppColors.error,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r15)),
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
           ),
         ],
       ),
