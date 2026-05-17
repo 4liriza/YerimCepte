@@ -1,159 +1,177 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/session_manager.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_sizes.dart';
 
-class TimerScreen extends StatefulWidget {
+class TimerScreen extends StatelessWidget {
   const TimerScreen({super.key});
 
-  @override
-  State<TimerScreen> createState() => _TimerScreenState();
-}
-
-class _TimerScreenState extends State<TimerScreen> {
-  static const int molaSuresi = 10;
-  int _remainingSeconds = molaSuresi;
-  Timer? _timer;
-  bool _isMolaActive = false;
-
-  void _startTimer() {
-    setState(() => _isMolaActive = true);
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_remainingSeconds > 0) {
-        setState(() {
-          _remainingSeconds--;
-        });
-      } else {
-        _timer?.cancel();
-        _oturumKapat(mesaj: AppStrings.timerEndedMessage, renk: AppColors.error);
-      }
-    });
-  }
-
-  Future<void> _oturumKapat({required String mesaj, Color renk = AppColors.success}) async {
-    _timer?.cancel();
-
-    // BURASI KRİTİK: Hafızadaki masa bilgisini siliyoruz ve süreyi kaydediyoruz
-    await SessionManager().oturumuKapat();
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(mesaj), backgroundColor: renk),
-    );
-
-    // Ana sayfaya dön ve tüm geçmişi temizle
-    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-  }
-
   String _formatTime(int seconds) {
-    int minutes = seconds ~/ 60;
-    int remainingSeconds = seconds % 60;
-    return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+    int m = seconds ~/ 60;
+    int s = seconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   @override
   Widget build(BuildContext context) {
-    String? tableName = SessionManager().oturdugumMasa ?? "Masa";
-    
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(AppStrings.timerScreenTitle),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.power_settings_new_rounded, color: AppColors.error),
-            onPressed: () => _oturumKapat(mesaj: AppStrings.sessionEndedMessage),
-            tooltip: 'Oturumu Kapat',
-          ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.p24, vertical: AppSizes.p12),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppSizes.r20),
-              ),
-              child: Text(
-                tableName,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryDark,
-                ),
-              ),
-            ),
-            const SizedBox(height: 60),
+    return ListenableBuilder(
+      listenable: SessionManager(),
+      builder: (context, child) {
+        final session = SessionManager();
+        double progress = session.kalanSure / (20 * 60);
 
-            // SÜRE BURADA GÖRÜNÜYOR:
-            Stack(
-              alignment: Alignment.center,
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: Padding(
+            padding: const EdgeInsets.all(AppSizes.p24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(
-                  width: 240,
-                  height: 240,
-                  child: CircularProgressIndicator(
-                    value: _remainingSeconds / molaSuresi,
-                    strokeWidth: 12,
-                    backgroundColor: Colors.grey.shade200,
-                    color: _isMolaActive ? AppColors.warning : AppColors.success,
-                    strokeCap: StrokeCap.round,
+                const Icon(Icons.timer_outlined, size: 80, color: AppColors.primary),
+                const SizedBox(height: AppSizes.p24),
+                Text(
+                  session.moladaMi ? AppStrings.timerBreakTitle : AppStrings.timerActiveTitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: AppSizes.p48),
+                Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 250,
+                        height: 250,
+                        child: CircularProgressIndicator(
+                          value: progress,
+                          strokeWidth: 15,
+                          backgroundColor: Colors.grey.shade200,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            session.moladaMi ? AppColors.warning : AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _formatTime(session.kalanSure),
+                            style: TextStyle(
+                              fontSize: 48,
+                              fontWeight: FontWeight.bold,
+                              color: session.moladaMi ? AppColors.warning : AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Kalan Mola Hakkı",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSizes.p48),
+                Row(
                   children: [
-                    Text(
-                      _formatTime(_remainingSeconds),
-                      style: TextStyle(
-                        fontSize: 60,
-                        fontWeight: FontWeight.w800,
-                        color: _isMolaActive ? AppColors.warning : AppColors.textPrimary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          if (session.moladaMi) {
+                            session.molaBitir();
+                          } else {
+                            session.otomatikMolaBaslat();
+                          }
+                        },
+                        icon: Icon(session.moladaMi ? Icons.play_arrow : Icons.pause),
+                        label: Text(session.moladaMi ? "Molayı Bitir" : "Mola Ver (20 dk)"),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: AppSizes.p16),
+                          backgroundColor: session.moladaMi ? AppColors.success : AppColors.warning,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r15)),
+                        ),
                       ),
                     ),
-                    if (_isMolaActive)
-                      const Text(
-                        "Mola Süresi",
-                        style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.w600),
+                    const SizedBox(width: AppSizes.p12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          _showExitConfirmDialog(context);
+                        },
+                        icon: const Icon(Icons.exit_to_app),
+                        label: const Text(AppStrings.endSessionButton),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: AppSizes.p16),
+                          backgroundColor: AppColors.error,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r15)),
+                        ),
                       ),
+                    ),
                   ],
+                ),
+                const SizedBox(height: AppSizes.p24),
+                // Test Simülasyon Butonu
+                OutlinedButton.icon(
+                  onPressed: () {
+                    session.otomatikMolaBaslat();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Turnikeden Çıkış Algılandı! Otomatik Mola Başladı."))
+                    );
+                  },
+                  icon: const Icon(Icons.directions_walk),
+                  label: const Text("TEST: Turnikeden Çıkışı Simüle Et"),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: AppSizes.p12),
+                    foregroundColor: Colors.deepPurple,
+                    side: const BorderSide(color: Colors.deepPurple),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r15)),
+                  ),
                 ),
               ],
             ),
+          ),
+        );
+      }
+    );
+  }
 
-            const SizedBox(height: 60),
-            ElevatedButton.icon(
-              onPressed: _isMolaActive
-                  ? () => _oturumKapat(mesaj: AppStrings.backFromBreakMessage)
-                  : _startTimer,
-              icon: Icon(_isMolaActive ? Icons.check_circle_outline : Icons.coffee_rounded),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isMolaActive ? AppColors.success : AppColors.warning,
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.p40, vertical: AppSizes.p20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r30)),
-                elevation: 8,
-                shadowColor: (_isMolaActive ? AppColors.success : AppColors.warning).withOpacity(0.5),
-              ),
-              label: Text(
-                _isMolaActive ? AppStrings.returnToTableButton : AppStrings.takeBreakButton,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+  void _showExitConfirmDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Oturumu Sonlandır', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text(AppStrings.endSessionConfirm),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r15)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(AppStrings.cancelButton, style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              SessionManager().oturumuKapat();
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.r8)),
             ),
-          ],
-        ),
+            child: const Text('Evet, Ayrılıyorum'),
+          ),
+        ],
       ),
     );
   }
