@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
+import '../../../core/constants/app_strings.dart';
 import '../../../core/models/table_model.dart';
 
 class LibraryMapWidget extends StatelessWidget {
@@ -89,7 +90,7 @@ class LibraryMapWidget extends StatelessWidget {
                       }
 
                       // Determine if the table matches the filter or if no filter is active
-                      bool matchesFilter = activeFilter == "Hepsi" || isHighlighted;
+                      bool matchesFilter = activeFilter == AppStrings.filterAll || isHighlighted;
 
                       Color tableColor;
                       if (!matchesFilter) {
@@ -111,7 +112,7 @@ class LibraryMapWidget extends StatelessWidget {
                               color: tableColor,
                               borderRadius: BorderRadius.circular(8),
                               boxShadow: [
-                                if (isHighlighted && activeFilter != "Hepsi")
+                                if (isHighlighted && activeFilter != AppStrings.filterAll)
                                   BoxShadow(
                                     color: AppColors.primary.withValues(
                                       alpha: 0.6,
@@ -126,10 +127,10 @@ class LibraryMapWidget extends StatelessWidget {
                                 ),
                               ],
                               border: Border.all(
-                                color: (isHighlighted && activeFilter != "Hepsi")
+                                color: (isHighlighted && activeFilter != AppStrings.filterAll)
                                     ? Colors.yellow
                                     : Colors.white,
-                                width: (isHighlighted && activeFilter != "Hepsi") ? 3 : 1,
+                                width: (isHighlighted && activeFilter != AppStrings.filterAll) ? 3 : 1,
                               ),
                             ),                            child: Center(
                               child: Column(
@@ -167,9 +168,9 @@ class LibraryMapWidget extends StatelessWidget {
   }
 
   bool _checkHighlight(TableModel table) {
-    if (activeFilter == "Prizli") return table.hasSocket;
-    if (activeFilter == "Sessiz Alan") return table.isSilentArea;
-    if (activeFilter == "Boş Masalar") return !table.isFull;
+    if (activeFilter == AppStrings.filterWithSocket) return table.hasSocket;
+    if (activeFilter == AppStrings.filterSilentArea) return table.isSilentArea;
+    if (activeFilter == AppStrings.filterEmpty) return !table.isFull;
     return false;
   }
 }
