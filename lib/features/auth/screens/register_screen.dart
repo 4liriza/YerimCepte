@@ -14,24 +14,45 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
   Future<void> _register() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Lütfen tüm alanları doldurunuz.'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+
+    if (!email.toLowerCase().endsWith('.edu') && !email.toLowerCase().endsWith('.edu.tr')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Sadece üniversite e-posta adresleri (.edu veya .edu.tr) ile kayıt olabilirsiniz.'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+        email: email,
+        password: password,
       );
 
       if (credential.user != null) {
         // Firestore'da kullanıcı dökümanı oluştur
         final newUser = UserModel(
           uid: credential.user!.uid,
-          name: _emailController.text.split('@').first, // Geçici isim
-          email: _emailController.text.trim(),
+          name: name,
+          email: email,
           points: 0,
           totalStudyTime: 0,
         );
@@ -75,6 +96,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppColors.primaryDark, letterSpacing: -1),
                   ),
                   const SizedBox(height: AppSizes.p48),
+                  _buildTextField(controller: _nameController, label: "Ad Soyad", icon: Icons.person_outline),
+                  const SizedBox(height: AppSizes.p16),
                   _buildTextField(controller: _emailController, label: AppStrings.emailHint, icon: Icons.email_outlined),
                   const SizedBox(height: AppSizes.p16),
                   _buildTextField(controller: _passwordController, label: AppStrings.passwordHint, icon: Icons.lock_outline, isPassword: true),
