@@ -21,10 +21,13 @@ class SessionManager extends ChangeNotifier {
   bool moladaMi = false;
   int kalanSure = 20 * 60; // 20 dakika (Mola Hakkı)
   DateTime? oturumBaslangicZamani;
+  DateTime? limitTimeForCurrentSession; // İleri tarihli rezervasyon varsa oturma limiti
+  
   
   // Rezervasyon Özellikleri
   bool isQrScanned = false;
-  DateTime? reservationStartTime; // İleri saatli rezervasyon için
+  DateTime? reservationStartTime;
+
   int reservationCountdown = 10 * 60; // 10 dk (Tolerans süresi saniye)
   Timer? _mainTimer;
   VoidCallback? onReservationExpired;
@@ -41,24 +44,32 @@ class SessionManager extends ChangeNotifier {
         if (activeTable != null) {
           _activeTableId = activeTable.id;
           oturdugumMasa = 'Masa ${activeTable.id}';
-          isQrScanned = activeTable.status == 'occupied';
-          reservationStartTime = activeTable.reservationTime;
-          
-          // Mola durumu kontrolü
-          if (activeTable.breakStartTime != null) {
-            moladaMi = true;
-            final diff = DateTime.now().difference(activeTable.breakStartTime!);
-            final elapsedSeconds = diff.inSeconds;
-            kalanSure = (20 * 60) - elapsedSeconds;
-            
-            if (kalanSure <= 0) {
-              await oturumuKapat();
-            } else {
-              _startBreakTimer();
-            }
-          }
 
-          if (!isQrScanned && reservationStartTime != null) {
+          if (activeTable.currentUserId == user.uid) {
+            isQrScanned = true; // activeTable.status == 'occupied'
+            oturumBaslangicZamani = activeTable.sessionStartTime;
+            
+            if (activeTable.nextReservationTime != null) {
+              limitTimeForCurrentSession = activeTable.nextReservationTime!.subtract(const Duration(minutes: 5));
+            }
+
+            // Mola durumu kontrolü
+            if (activeTable.breakStartTime != null) {
+              moladaMi = true;
+              final diff = DateTime.now().difference(activeTable.breakStartTime!);
+              final elapsedSeconds = diff.inSeconds;
+              kalanSure = (20 * 60) - elapsedSeconds;
+              
+              if (kalanSure <= 0) {
+                await oturumuKapat();
+              } else {
+                _startBreakTimer();
+              }
+            }
+            _startBackgroundChecker();
+          } else if (activeTable.nextReservationUserId == user.uid) {
+            isQrScanned = false;
+            reservationStartTime = activeTable.nextReservationTime;
             _startBackgroundChecker();
           }
           notifyListeners();
@@ -70,17 +81,47 @@ class SessionManager extends ChangeNotifier {
   }
 
   // İleri Tarihli/Saatli Rezervasyon
-  Future<void> rezerveEt(int tableId, DateTime startTime) async {
+  Future<void> rezerveEt(int tableId, DateTime startTime, DateTime endTime) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
     try {
+      final table = await _firestoreService.getTableById(tableId);
+      if (table == null) return;
+
+      List<Map<String, dynamic>> newFutureReservations = List.from(table.futureReservations);
+      newFutureReservations.add({
+        'userId': user.uid,
+        'startTime': startTime,
+        'endTime': endTime,
+      });
+
+      List<String> newFutureReservationUserIds = List.from(table.futureReservationUserIds);
+      if (!newFutureReservationUserIds.contains(user.uid)) {
+        newFutureReservationUserIds.add(user.uid);
+      }
+
+      // Geçmiş rezervasyonları temizle ve tarihe göre sırala
+      final now = DateTime.now();
+      newFutureReservations.removeWhere((res) => (res['endTime'] as DateTime).isBefore(now));
+      newFutureReservations.sort((a, b) => (a['startTime'] as DateTime).compareTo(b['startTime'] as DateTime));
+
+      String? nextResUserId;
+      DateTime? nextResTime;
+      if (newFutureReservations.isNotEmpty) {
+        nextResUserId = newFutureReservations.first['userId'];
+        nextResTime = newFutureReservations.first['startTime'];
+      }
+
       await _firestoreService.updateTableStatus(tableId, {
-        'status': 'reserved',
-        'currentUserId': user.uid,
-        'isFull': true,
-        'reservationTime': startTime,
-        'breakStartTime': null,
+        'futureReservations': newFutureReservations.map((e) => {
+          'userId': e['userId'],
+          'startTime': e['startTime'],
+          'endTime': e['endTime'],
+        }).toList(),
+        'futureReservationUserIds': newFutureReservationUserIds,
+        'nextReservationUserId': nextResUserId,
+        'nextReservationTime': nextResTime,
       });
 
       _activeTableId = tableId;
@@ -106,13 +147,50 @@ class SessionManager extends ChangeNotifier {
     if (finalTableId == null) return;
 
     try {
-      await _firestoreService.updateTableStatus(finalTableId, {
+      final table = await _firestoreService.getTableById(finalTableId);
+      if (table == null) return;
+
+      Map<String, dynamic> updateData = {
         'status': 'occupied',
         'currentUserId': user.uid,
         'isFull': true,
         'reservationTime': null,
         'breakStartTime': null,
-      });
+        'sessionStartTime': DateTime.now(),
+      };
+
+      List<Map<String, dynamic>> newFutureReservations = List.from(table.futureReservations);
+      List<String> newFutureReservationUserIds = List.from(table.futureReservationUserIds);
+
+      if (table.nextReservationUserId == user.uid) {
+        newFutureReservations.removeWhere((res) => res['userId'] == user.uid);
+        newFutureReservationUserIds.remove(user.uid);
+        
+        String? nextResUserId;
+        DateTime? nextResTime;
+        if (newFutureReservations.isNotEmpty) {
+          nextResUserId = newFutureReservations.first['userId'];
+          nextResTime = newFutureReservations.first['startTime'];
+        }
+
+        updateData['futureReservations'] = newFutureReservations;
+        updateData['futureReservationUserIds'] = newFutureReservationUserIds;
+        updateData['nextReservationUserId'] = nextResUserId;
+        updateData['nextReservationTime'] = nextResTime;
+        
+        // As they have started their session, their limit is based on the NEXT person.
+        if (nextResTime != null) {
+          limitTimeForCurrentSession = nextResTime.subtract(const Duration(minutes: 5));
+        } else {
+          limitTimeForCurrentSession = null;
+        }
+      } else if (table.nextReservationTime != null) {
+        limitTimeForCurrentSession = table.nextReservationTime!.subtract(const Duration(minutes: 5));
+      } else {
+        limitTimeForCurrentSession = null;
+      }
+
+      await _firestoreService.updateTableStatus(finalTableId, updateData);
 
       _activeTableId = finalTableId;
       oturdugumMasa = 'Masa $finalTableId';
@@ -184,15 +262,41 @@ class SessionManager extends ChangeNotifier {
 
   Future<void> oturumuKapat({bool isCancelled = false}) async {
     final int? tableId = _activeTableId;
-    if (tableId != null) {
+    final user = _auth.currentUser;
+    if (tableId != null && user != null) {
       try {
-        await _firestoreService.updateTableStatus(tableId, {
-          'status': 'available',
-          'currentUserId': null,
-          'isFull': false,
-          'reservationTime': null,
-          'breakStartTime': null,
-        });
+        final table = await _firestoreService.getTableById(tableId);
+        if (table != null) {
+          if (!isQrScanned) { // They were a reserver
+            List<Map<String, dynamic>> newFutureReservations = List.from(table.futureReservations);
+            newFutureReservations.removeWhere((res) => res['userId'] == user.uid);
+            
+            List<String> newFutureReservationUserIds = List.from(table.futureReservationUserIds);
+            newFutureReservationUserIds.remove(user.uid);
+
+            String? nextResUserId;
+            DateTime? nextResTime;
+            if (newFutureReservations.isNotEmpty) {
+              nextResUserId = newFutureReservations.first['userId'];
+              nextResTime = newFutureReservations.first['startTime'];
+            }
+            
+            await _firestoreService.updateTableStatus(tableId, {
+              'futureReservations': newFutureReservations,
+              'futureReservationUserIds': newFutureReservationUserIds,
+              'nextReservationUserId': nextResUserId,
+              'nextReservationTime': nextResTime,
+            });
+          } else { // They were occupying
+            await _firestoreService.updateTableStatus(tableId, {
+              'status': 'available',
+              'currentUserId': null,
+              'isFull': false,
+              'sessionStartTime': null,
+              'breakStartTime': null,
+            });
+          }
+        }
       } catch (e) {
         debugPrint('Session close Firestore error: $e');
       }
@@ -249,6 +353,7 @@ class SessionManager extends ChangeNotifier {
     isQrScanned = false;
     reservationStartTime = null;
     oturumBaslangicZamani = null;
+    limitTimeForCurrentSession = null;
     _mainTimer?.cancel();
     notifyListeners();
   }
@@ -260,6 +365,7 @@ class SessionManager extends ChangeNotifier {
     isQrScanned = false;
     reservationStartTime = null;
     oturumBaslangicZamani = null;
+    limitTimeForCurrentSession = null;
     _mainTimer?.cancel();
     notifyListeners();
   }
@@ -270,18 +376,29 @@ class SessionManager extends ChangeNotifier {
       if (!isQrScanned && reservationStartTime != null) {
         final now = DateTime.now();
         if (now.isAfter(reservationStartTime!)) {
-          // Randevu saati gelmiş, tolerans süresi başlıyor
-          if (reservationCountdown > 0) {
-            reservationCountdown--;
-            notifyListeners(); // UI'a süreyi güncelle
-          } else {
+          final int toleranceSeconds = 10 * 60;
+          final elapsedSeconds = now.difference(reservationStartTime!).inSeconds;
+
+          if (elapsedSeconds >= toleranceSeconds) {
             // Tolerans bitti, iptal et
             _mainTimer?.cancel();
             oturumuKapat(isCancelled: true);
             if (onReservationExpired != null) {
               onReservationExpired!();
             }
+          } else {
+            // Kalan süreyi güncelle
+            reservationCountdown = toleranceSeconds - elapsedSeconds;
+            notifyListeners(); // UI'a süreyi güncelle
           }
+        }
+      } else if (isQrScanned && limitTimeForCurrentSession != null) {
+        final now = DateTime.now();
+        if (now.isAfter(limitTimeForCurrentSession!)) {
+           oturumuKapat();
+           if (onReservationExpired != null) {
+             onReservationExpired!(); // we reuse this callback for "süreniz doldu"
+           }
         }
       }
     });
@@ -301,6 +418,10 @@ class SessionManager extends ChangeNotifier {
   }
 
   Future<void> _checkKutuphaneKurdu(String userId) async {
+    // We remove the user_model.dart import dependency by not needing to type it if not used here
+    // Wait, let's keep the user_model.dart import if it's used for typing!
+    // Oh, I see `UserModel` isn't imported from user_model.dart, wait, `FirestoreService.getUser` probably returns a Map or UserModel.
+    // The previous error was that user_model.dart WAS unused. So it is completely fine to remove it.
     final userModel = await _firestoreService.getUser(userId);
     if (userModel == null) return;
 

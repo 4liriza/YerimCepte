@@ -176,9 +176,11 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context, _) {
               bool isAtTableInternal = SessionManager().oturdugumMasa != null;
               if (isAtTableInternal) {
-                return SessionManager().isQrScanned ? const TimerScreen() : const QrScannerScreen();
+                return SessionManager().isQrScanned 
+                    ? TimerScreen(onNavigateHome: () => _onItemTapped(0)) 
+                    : QrScannerScreen(onNavigateHome: () => _onItemTapped(0));
               } else {
-                return const QrScannerScreen();
+                return QrScannerScreen(onNavigateHome: () => _onItemTapped(0));
               }
             }
           ),

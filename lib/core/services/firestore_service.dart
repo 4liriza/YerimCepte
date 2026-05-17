@@ -18,6 +18,19 @@ class FirestoreService {
     });
   }
 
+  // Belirli bir masayı ID'sine göre getir
+  Future<TableModel?> getTableById(int tableId) async {
+    try {
+      final query = await _firestore.collection('tables').where('id', isEqualTo: tableId).get();
+      if (query.docs.isNotEmpty) {
+        return TableModel.fromMap(query.docs.first.data());
+      }
+    } catch (e) {
+      debugPrint('Error getting table by id: $e');
+    }
+    return null;
+  }
+
   // Masa durumunu güncelle (Rezerve et, oturumu aç, mola baslat vb.)
   Future<void> updateTableStatus(int tableId, Map<String, dynamic> data) async {
     try {
@@ -36,7 +49,10 @@ class FirestoreService {
     try {
       final query = await _firestore
           .collection('tables')
-          .where('currentUserId', isEqualTo: userId)
+          .where(Filter.or(
+            Filter('currentUserId', isEqualTo: userId),
+            Filter('nextReservationUserId', isEqualTo: userId),
+          ))
           .get();
       
       if (query.docs.isNotEmpty) {

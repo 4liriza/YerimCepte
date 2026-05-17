@@ -25,8 +25,12 @@ class HistoryScreen extends StatelessWidget {
           : StreamBuilder<List<ReservationModel>>(
               stream: FirestoreService().getReservationHistory(userId),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    !snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return _buildEmptyHistory();
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return _buildEmptyHistory();
@@ -47,14 +51,18 @@ class HistoryScreen extends StatelessWidget {
 
   Widget _buildHistoryCard(ReservationModel record) {
     final dateStr = DateFormat('dd MMMM yyyy, HH:mm').format(record.startTime);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.p16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppSizes.r15),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: ListTile(
@@ -62,28 +70,48 @@ class HistoryScreen extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(AppSizes.p12),
           decoration: BoxDecoration(
-            color: record.status == 'completed' ? AppColors.success.withValues(alpha: 0.1) : AppColors.error.withValues(alpha: 0.1),
+            color: record.status == 'completed'
+                ? AppColors.success.withValues(alpha: 0.1)
+                : AppColors.error.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(
-            record.status == 'completed' ? Icons.check_circle_outline : Icons.cancel_outlined,
-            color: record.status == 'completed' ? AppColors.success : AppColors.error,
+            record.status == 'completed'
+                ? Icons.check_circle_outline
+                : Icons.cancel_outlined,
+            color: record.status == 'completed'
+                ? AppColors.success
+                : AppColors.error,
           ),
         ),
-        title: Text("Masa ${record.tableId}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(
+          "Masa ${record.tableId}",
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Text(dateStr, style: const TextStyle(color: AppColors.textSecondary)),
+            Text(
+              dateStr,
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
             if (record.earnedPoints > 0)
-              Text("+${record.earnedPoints} XP Kazanıldı", style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+              Text(
+                "+${record.earnedPoints} XP Kazanıldı",
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
           ],
         ),
         trailing: Text(
           record.status == 'completed' ? "Tamamlandı" : "İptal Edildi",
           style: TextStyle(
-            color: record.status == 'completed' ? AppColors.success : AppColors.error,
+            color: record.status == 'completed'
+                ? AppColors.success
+                : AppColors.error,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -96,9 +124,16 @@ class HistoryScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history_rounded, size: 80, color: AppColors.primary.withValues(alpha: 0.2)),
+          Icon(
+            Icons.history_rounded,
+            size: 80,
+            color: AppColors.primary.withValues(alpha: 0.2),
+          ),
           const SizedBox(height: 16),
-          const Text("Henüz bir rezervasyon geçmişin yok.", style: TextStyle(color: AppColors.textSecondary)),
+          const Text(
+            "Henüz bir rezervasyon geçmişin yok.",
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
         ],
       ),
     );
