@@ -134,12 +134,23 @@ class LibraryMapWidget extends StatelessWidget {
                                       fontSize: 12,
                                     ),
                                   ),
-                                  if (table.hasSocket)
-                                    const Icon(
-                                      Icons.power,
-                                      color: Colors.white,
-                                      size: 10,
-                                    ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      if (table.hasSocket)
+                                        const Icon(
+                                          Icons.power,
+                                          color: Colors.white,
+                                          size: 10,
+                                        ),
+                                      if (table.isSilentArea)
+                                        const Icon(
+                                          Icons.volume_off,
+                                          color: Colors.white,
+                                          size: 10,
+                                        ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
